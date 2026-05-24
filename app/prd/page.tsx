@@ -65,8 +65,8 @@ export default function PrdPage() {
           }
         }
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "生成失败");
     } finally {
       setIsLoading(false);
     }

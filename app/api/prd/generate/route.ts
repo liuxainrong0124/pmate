@@ -75,8 +75,9 @@ export async function POST(request: NextRequest) {
 
         send({ type: "done", usage: response.usage });
         controller.close();
-      } catch (error: any) {
-        send({ type: "error", message: error.message || "PRD generation failed" });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "PRD generation failed";
+        send({ type: "error", message });
         controller.close();
       }
     },

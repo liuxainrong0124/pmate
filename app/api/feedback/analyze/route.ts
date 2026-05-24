@@ -35,10 +35,11 @@ export async function POST(request: NextRequest) {
     const report = parseFeedbackResponse(response.content);
 
     return NextResponse.json({ report, usage: response.usage });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Feedback analysis error:", error);
+    const message = error instanceof Error ? error.message : "Analysis failed";
     return NextResponse.json(
-      { error: error.message || "Analysis failed" },
+      { error: message },
       { status: 500 }
     );
   }

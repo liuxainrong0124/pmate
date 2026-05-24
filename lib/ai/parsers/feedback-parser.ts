@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FeedbackReport, FeedbackInsight, ActionItem, FeedbackCategory } from "@/types";
 
 const VALID_CATEGORIES: FeedbackCategory[] = ["bug", "feature_request", "ux", "support", "other"];
@@ -16,12 +17,10 @@ export function parseFeedbackResponse(rawJson: string): FeedbackReport {
     parsed = JSON.parse(match[0]);
   }
 
-  // Bug 1: guard against literal null from JSON.parse
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     parsed = {};
   }
 
-  // Bug 2: guard against non-array insights before mapping
   const insights: FeedbackInsight[] = Array.isArray(parsed.insights)
     ? parsed.insights.map((i: any): FeedbackInsight => ({
         title: String(i.title || ""),
@@ -34,7 +33,6 @@ export function parseFeedbackResponse(rawJson: string): FeedbackReport {
       }))
     : [];
 
-  // Bug 3: totalFeedbackCount from validated insights array, not raw parsed.insights
   const totalFeedbackCount = insights.reduce(
     (sum, i) => sum + i.count,
     0,

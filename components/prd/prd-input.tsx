@@ -19,12 +19,6 @@ interface PrdInputProps {
   isLoading: boolean;
 }
 
-const templateLabels: Record<PrdTemplateType, string> = {
-  new_feature: "新功能",
-  optimization: "功能优化",
-  campaign: "运营活动",
-};
-
 export function PrdInput({ onSubmit, isLoading }: PrdInputProps) {
   const [featureName, setFeatureName] = useState("");
   const [description, setDescription] = useState("");

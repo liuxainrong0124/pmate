@@ -26,8 +26,8 @@ export default function FeedbackPage() {
       }
       const data = await res.json();
       setReport(data.report);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "分析失败");
     } finally {
       setIsLoading(false);
     }
