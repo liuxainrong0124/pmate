@@ -1,101 +1,64 @@
-import Image from "next/image";
+import Link from "next/link";
+
+const modules = [
+  {
+    title: "用户反馈分析",
+    description:
+      "粘贴用户反馈，AI自动分类、提取关键洞察并按优先级给出行动建议。支持批量分析，结构化报告一目了然。",
+    href: "/feedback",
+  },
+  {
+    title: "PRD智能助手",
+    description:
+      "输入需求要点，AI按照标准PRD框架自动补全背景分析、用户故事、功能详述、埋点建议和验收标准。",
+    href: "/prd",
+  },
+  {
+    title: "竞品动态追踪",
+    description: "（即将上线）设定关注竞品，AI定期抓取更新动态并生成简报，第一时间发现值得关注的变化。",
+    href: "#",
+    comingSoon: true,
+  },
+];
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-3">PMate</h1>
+        <p className="text-lg text-gray-500">
+          面向产品经理的AI工作伴侣，把重复认知劳动AI化
+        </p>
+        <p className="text-sm text-gray-400 mt-2">
+          让PM专注于思考和决策，而非整理反馈和写文档
+        </p>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <div className="grid gap-4 md:grid-cols-3">
+        {modules.map((mod) => (
+          <Link
+            key={mod.href}
+            href={mod.href}
+            className={`block p-6 rounded-xl border transition-all ${
+              mod.comingSoon
+                ? "border-dashed border-gray-200 bg-gray-50/50 pointer-events-none"
+                : "border-gray-200 bg-white hover:shadow-md hover:border-blue-200"
+            }`}
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              {mod.title}
+              {mod.comingSoon && (
+                <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                  即将上线
+                </span>
+              )}
+            </h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              {mod.description}
+            </p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
