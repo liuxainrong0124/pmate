@@ -7,6 +7,7 @@ import { PrdProgressBar } from "@/components/prd/prd-progress";
 import { PrdInput as PrdInputType, PrdOutput, PrdProgress } from "@/types";
 import { parsePrdResponse } from "@/lib/ai/parsers/prd-parser";
 import ReactMarkdown from "react-markdown";
+import { ExportButton } from "@/components/shared/export-button";
 
 export default function PrdPage() {
   const [output, setOutput] = useState<PrdOutput | null>(null);
@@ -99,9 +100,17 @@ export default function PrdPage() {
       )}
 
       {output && (
-        <div className="mt-8">
+        <>
+          <div className="flex items-center justify-between mt-8 mb-4">
+            <h2 className="text-lg font-semibold">生成的PRD</h2>
+            <ExportButton
+              content={output.fullMarkdown}
+              filename={`prd-${Date.now()}.md`}
+              label="导出Markdown"
+            />
+          </div>
           <PrdOutputDisplay output={output} />
-        </div>
+        </>
       )}
     </div>
   );

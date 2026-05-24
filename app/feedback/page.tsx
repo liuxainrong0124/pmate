@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FeedbackInput } from "@/components/feedback/feedback-input";
 import { FeedbackReportDisplay } from "@/components/feedback/feedback-report";
 import { FeedbackReport } from "@/types";
+import { ExportButton } from "@/components/shared/export-button";
 
 export default function FeedbackPage() {
   const [report, setReport] = useState<FeedbackReport | null>(null);
@@ -48,9 +49,17 @@ export default function FeedbackPage() {
       )}
 
       {report && (
-        <div className="mt-8">
+        <>
+          <div className="flex items-center justify-between mt-8 mb-4">
+            <h2 className="text-lg font-semibold">分析报告</h2>
+            <ExportButton
+              content={JSON.stringify(report, null, 2)}
+              filename={`feedback-report-${Date.now()}.json`}
+              label="导出JSON"
+            />
+          </div>
           <FeedbackReportDisplay report={report} />
-        </div>
+        </>
       )}
     </div>
   );
