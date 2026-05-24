@@ -2,14 +2,26 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { ChatMessage, LlmCallOptions, LlmResponse } from "./types";
 
-const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || "",
-  baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
-});
+let _deepseek: OpenAI | null = null;
+function getDeepSeek(): OpenAI {
+  if (!_deepseek) {
+    _deepseek = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY || "",
+      baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
+    });
+  }
+  return _deepseek;
+}
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
+let _anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || "",
+    });
+  }
+  return _anthropic;
+}
 
 const DEFAULT_MODELS: Record<string, string> = {
   analysis: "deepseek-chat",
@@ -37,7 +49,7 @@ function selectProvider(
 
 async function callDeepSeek(options: LlmCallOptions): Promise<LlmResponse> {
   const model = options.model || DEFAULT_MODELS.analysis;
-  const completion = await deepseek.chat.completions.create({
+  const completion = await getDeepSeek().chat.completions.create({
     model,
     messages: options.messages.map((m) => ({
       role: m.role as "system" | "user" | "assistant",
@@ -67,7 +79,7 @@ async function callClaude(options: LlmCallOptions): Promise<LlmResponse> {
   const systemMsg = options.messages.find((m) => m.role === "system");
   const userMsgs = options.messages.filter((m) => m.role !== "system");
 
-  const msg = await anthropic.messages.create({
+  const msg = await getAnthropic().messages.create({
     model,
     max_tokens: options.maxTokens || 4096,
     temperature: options.temperature ?? 0.3,
@@ -94,7 +106,7 @@ export async function callLlmStreaming(
   onChunk: (chunk: string) => void
 ): Promise<LlmResponse> {
   const model = options.model || "deepseek-chat";
-  const stream = await deepseek.chat.completions.create({
+  const stream = await getDeepSeek().chat.completions.create({
     model,
     messages: options.messages.map((m) => ({
       role: m.role as "system" | "user" | "assistant",
