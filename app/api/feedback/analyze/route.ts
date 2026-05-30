@@ -6,7 +6,7 @@ import { parseFeedbackResponse } from "@/lib/ai/parsers/feedback-parser";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { feedbackText, customDimensions } = body;
+    const { feedbackText, customDimensions, apiKey } = body;
 
     if (!feedbackText || typeof feedbackText !== "string" || feedbackText.trim().length === 0) {
       return NextResponse.json(
@@ -22,13 +22,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await callLlm({
+    const response = await callLlm({ apiKey,
       messages: [
         { role: "system", content: FEEDBACK_SYSTEM_PROMPT },
         { role: "user", content: buildFeedbackUserPrompt(feedbackText, customDimensions) },
       ],
       temperature: 0.3,
-      maxTokens: 4096,
       responseFormat: "json_object",
     });
 

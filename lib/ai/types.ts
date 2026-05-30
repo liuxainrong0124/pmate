@@ -12,6 +12,8 @@ export interface LlmCallOptions {
   maxTokens?: number;
   responseFormat?: "text" | "json_object";
   stream?: boolean;
+  /** User-provided API key (from Settings), overrides server env var */
+  apiKey?: string;
 }
 
 export interface LlmResponse {

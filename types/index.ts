@@ -1,6 +1,7 @@
 // ===== Feedback Analyzer Types =====
 
 export type FeedbackCategory = "bug" | "feature_request" | "ux" | "support" | "other";
+export type SentimentTrend = "rising" | "stable" | "declining";
 
 export interface FeedbackInsight {
   title: string;
@@ -8,6 +9,9 @@ export interface FeedbackInsight {
   count: number;
   quotes: string[];
   category: FeedbackCategory;
+  rootCause: string;
+  sentimentTrend: SentimentTrend;
+  impactScore: number;
 }
 
 export interface ActionItem {
@@ -58,6 +62,53 @@ export type PrdProgressStep =
 export interface PrdProgress {
   step: PrdProgressStep;
   message: string;
+}
+
+// ===== Competitor Tracking Types =====
+
+export interface CompetitorProfile {
+  name: string;
+  overview: string;
+  keyFeatures: string[];
+  targetUsers: string;
+  recentUpdates: string;
+  strengthSummary: string;
+  weaknessSummary: string;
+}
+
+export interface ComparisonItem {
+  dimension: string;
+  ourPosition: string;
+  competitorPosition: string;
+  assessment: "advantage" | "disadvantage" | "parity";
+  gap: string;
+}
+
+export interface SWOTItem {
+  type: "strength" | "weakness" | "opportunity" | "threat";
+  title: string;
+  description: string;
+  relatedCompetitor: string;
+}
+
+export interface TimelinePhase {
+  phase: "短期(1个月)" | "中期(3个月)" | "长期(6个月)";
+  actions: string[];
+  goal: string;
+}
+
+export interface CompetitorReport {
+  summary: string;
+  competitorProfiles: CompetitorProfile[];
+  featureComparison: ComparisonItem[];
+  strengthsWeaknesses: SWOTItem[];
+  pricingAnalysis: string;
+  differentiation: string;
+  predictedMoves: string;
+  opportunities: string[];
+  threats: string[];
+  timeline: TimelinePhase[];
+  actionItems: ActionItem[];
 }
 
 // ===== History Types =====

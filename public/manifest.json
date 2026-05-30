@@ -1,0 +1,12 @@
+{
+  "name": "Pulse 工作台",
+  "short_name": "Pulse",
+  "description": "AI产品与运营工作台 — 覆盖需求、数据、用户、运营全流程",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3B82F6",
+  "background_color": "#F5F5F7",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}

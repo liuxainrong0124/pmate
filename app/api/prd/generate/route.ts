@@ -7,7 +7,7 @@ const VALID_TEMPLATES: PrdTemplateType[] = ["new_feature", "optimization", "camp
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { featureName, description, template, context, targetUsers } = body;
+  const { featureName, description, template, context, targetUsers, apiKey } = body;
 
   if (!featureName || !description || !template) {
     return new Response(
@@ -47,12 +47,12 @@ export async function POST(request: NextRequest) {
       try {
         const response = await callLlmStreaming(
           {
+            apiKey: apiKey || undefined,
             messages: [
               { role: "system", content: PRD_SYSTEM_PROMPT },
               { role: "user", content: buildPrdUserPrompt(prdInput) },
             ],
             temperature: 0.5,
-            maxTokens: 8192,
           },
           (chunk) => {
             accumulatedText += chunk;

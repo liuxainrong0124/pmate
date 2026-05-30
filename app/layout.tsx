@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/layout/nav";
+import { Sidebar } from "@/components/layout/sidebar";
+import { MainContent } from "@/components/layout/main-content";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
+import { ToastContainer } from "@/components/shared/toast";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "PMate - AI产品经理工作台",
-  description: "面向产品经理的AI工作伴侣，让PM专注于思考和决策",
+  title: "Pulse - AI产品与运营工作台",
+  description:
+    "产品经理和运营的AI原生工作台，覆盖需求、数据、用户、运营的全流程。支持 Word/PPT/CSV/Excel/Markdown/JSON 全格式导出，PDF/Word/Excel 文档解析，百万级数据分析。",
 };
 
 export default function RootLayout({
@@ -16,10 +22,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
-      <body className={inter.className}>
-        <Nav />
-        <main className="min-h-screen bg-gray-50">{children}</main>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('pulse_theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className={`${inter.className} ${jetbrainsMono.variable} bg-background`}>
+        <ThemeProvider>
+          <Sidebar />
+          <MainContent>{children}</MainContent>
+          <MobileTabBar />
+          <ToastContainer />
+        </ThemeProvider>
       </body>
     </html>
   );
