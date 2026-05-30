@@ -1,16 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Bell, Palette, Shield, User, Monitor, Globe, Key, ChevronRight, Check, X } from "lucide-react";
+import { Settings, Bell, Palette, Shield, User, Monitor, Globe, Key, ChevronRight, Check, X, AlertTriangle, RefreshCw } from "lucide-react";
 import { getSettings, saveSettings, StoredSettings } from "@/lib/store/local-store";
+import { getAlertSettings, saveAlertSettings, AlertSettings } from "@/lib/alert";
+import { isNotificationSupported, getNotificationPermission, requestNotificationPermission } from "@/lib/notify";
+import { showToast } from "@/components/shared/toast";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<StoredSettings | null>(null);
+  const [alertSettings, setAlertSettings] = useState<AlertSettings | null>(null);
   const [saved, setSaved] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifyPerm, setNotifyPerm] = useState<NotificationPermission>("default");
 
   useEffect(() => {
     setSettings(getSettings());
+    setAlertSettings(getAlertSettings());
+    if (isNotificationSupported()) setNotifyPerm(getNotificationPermission());
   }, []);
 
   const update = (updates: Partial<StoredSettings>) => {
@@ -177,6 +184,137 @@ export default function SettingsPage() {
             >
               <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${
                 settings.emailNotifications ? "left-[18px]" : "left-0.5"
+              }`} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Data Alerts */}
+      <section className="mb-8 animate-fade-in">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">数据告警</h2>
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          {/* Auto refresh toggle */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+              <RefreshCw className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">数据自动刷新</p>
+              <p className="text-xs text-gray-400 mt-0.5">每 5 分钟自动拉取最新数据</p>
+            </div>
+            <button
+              onClick={() => {
+                const next = { autoRefresh: !alertSettings!.autoRefresh };
+                setAlertSettings({ ...alertSettings!, ...next });
+                saveAlertSettings(next);
+                showToast(alertSettings!.autoRefresh ? "已关闭自动刷新" : "已开启自动刷新", "success");
+              }}
+              className={`w-10 h-6 rounded-full shrink-0 relative transition-colors ${
+                alertSettings?.autoRefresh ? "bg-gray-900" : "bg-gray-200"
+              }`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${
+                alertSettings?.autoRefresh ? "left-[18px]" : "left-0.5"
+              }`} />
+            </button>
+          </div>
+
+          {/* Browser notification */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">浏览器通知</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {notifyPerm === "granted" ? "已授权 ✓" : notifyPerm === "denied" ? "已拒绝 ✗" : "需要授权"}
+              </p>
+            </div>
+            {notifyPerm !== "granted" && (
+              <button
+                onClick={async () => {
+                  const result = await requestNotificationPermission();
+                  setNotifyPerm(result);
+                  if (result === "granted") {
+                    showToast("通知已开启", "success");
+                  } else {
+                    showToast("通知授权被拒绝或被浏览器阻止", "error");
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors"
+              >
+                授权通知
+              </button>
+            )}
+          </div>
+
+          {/* Alert threshold */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">异动告警阈值</p>
+              <p className="text-xs text-gray-400 mt-0.5">指标变化超过 ±{alertSettings?.threshold || 5}% 时通知</p>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  const threshold = Math.max(1, (alertSettings?.threshold || 5) - 1);
+                  setAlertSettings({ ...alertSettings!, threshold });
+                  saveAlertSettings({ threshold });
+                }}
+                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 text-sm font-medium"
+              >−</button>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                value={alertSettings?.threshold || 5}
+                onChange={(e) => {
+                  const threshold = Number(e.target.value);
+                  setAlertSettings({ ...alertSettings!, threshold });
+                  saveAlertSettings({ threshold });
+                }}
+                className="flex-1 h-2 rounded-full appearance-none bg-gray-200 accent-gray-900 cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-900 w-10 text-center tabular-nums">±{alertSettings?.threshold || 5}%</span>
+              <button
+                onClick={() => {
+                  const threshold = Math.min(20, (alertSettings?.threshold || 5) + 1);
+                  setAlertSettings({ ...alertSettings!, threshold });
+                  saveAlertSettings({ threshold });
+                }}
+                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 text-sm font-medium"
+              >+</button>
+            </div>
+          </div>
+
+          {/* Alert enable toggle */}
+          <div className="flex items-center gap-4 p-4">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">启用异动告警</p>
+              <p className="text-xs text-gray-400 mt-0.5">检测到异常波动时弹窗+通知</p>
+            </div>
+            <button
+              onClick={() => {
+                const next = { enabled: !alertSettings!.enabled };
+                setAlertSettings({ ...alertSettings!, ...next });
+                saveAlertSettings(next);
+                showToast(alertSettings!.enabled ? "已关闭异动告警" : "已开启异动告警", "success");
+              }}
+              className={`w-10 h-6 rounded-full shrink-0 relative transition-colors ${
+                alertSettings?.enabled ? "bg-gray-900" : "bg-gray-200"
+              }`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${
+                alertSettings?.enabled ? "left-[18px]" : "left-0.5"
               }`} />
             </button>
           </div>

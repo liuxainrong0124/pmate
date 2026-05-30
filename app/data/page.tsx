@@ -6,9 +6,10 @@ import { AnomalyAttribution } from "@/components/data/anomaly-attribution";
 import { DataUpload } from "@/components/data/data-upload";
 import { getUploadedMetrics, StoredMetric } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { getAlertSettings, checkAnomaly, getAlertHistory, AlertRecord } from "@/lib/alert";
 import {
   BarChart3, TrendingUp, TrendingDown, Upload, AlertTriangle,
-  Download, X, Calendar, LineChart, AreaChart
+  Download, X, Calendar, LineChart, AreaChart, Bell, Clock
 } from "lucide-react";
 
 // ── Types ──
@@ -622,6 +623,8 @@ export default function DataPage() {
   const [drawerMetric, setDrawerMetric] = useState<MetricWithHistory | null>(null);
   const [chartType, setChartType] = useState<ChartType>("line");
   const [dimension, setDimension] = useState<Dimension>("channel");
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [lastRefresh, setLastRefresh] = useState<string>("");
 
   // Initialize metrics from localStorage or mock data
   useEffect(() => {
@@ -651,6 +654,73 @@ export default function DataPage() {
       return { ...m, ...display };
     });
   }, [baseMetrics, timeRange, customStart, customEnd]);
+
+  // Auto-refresh timer
+  useEffect(() => {
+    const alertSettings = getAlertSettings();
+    if (!alertSettings.autoRefresh) return;
+
+    const intervalMs = alertSettings.refreshIntervalMinutes * 60 * 1000;
+
+    const timer = setInterval(() => {
+      const uploaded = getUploadedMetrics();
+      if (uploaded.length > 0) {
+        const merged = [...generateDefaultMockMetrics()];
+        for (const s of uploaded) {
+          const converted = storedToMetric(s);
+          const idx = merged.findIndex(m => m.label === s.label);
+          if (idx >= 0) merged[idx] = converted;
+          else merged.push(converted);
+        }
+        setBaseMetrics(merged);
+      } else {
+        setBaseMetrics(generateDefaultMockMetrics());
+      }
+      setLastRefresh(new Date().toLocaleTimeString("zh-CN"));
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Run anomaly check when metrics change
+  useEffect(() => {
+    if (baseMetrics.length === 0) return;
+    const alertSettings = getAlertSettings();
+    if (!alertSettings.enabled) return;
+
+    const newAlerts: AlertRecord[] = [];
+    for (const m of baseMetrics) {
+      if (m.history.length < 14) continue;
+      const recent = m.history.slice(-7);
+      const prev = m.history.slice(-14, -7);
+      if (recent.length === 0 || prev.length === 0) continue;
+
+      const curAvg = recent.reduce((s, h) => s + h.value, 0) / recent.length;
+      const prevAvg = prev.reduce((s, h) => s + h.value, 0) / prev.length;
+
+      const dec = m.unit === "%" ? 2 : 0;
+      const curDisplay = formatValue(curAvg, m.unit, dec);
+      const prevDisplay = formatValue(prevAvg, m.unit, dec);
+
+      const record = checkAnomaly({
+        label: m.label,
+        currentValue: curAvg,
+        previousValue: prevAvg,
+        displayValue: curDisplay,
+        displayPrev: prevDisplay,
+      });
+      if (record) newAlerts.push(record);
+    }
+
+    if (newAlerts.length > 0) {
+      setAlerts(prev => [...newAlerts, ...prev].slice(0, 20));
+    }
+  }, [baseMetrics]);
+
+  // Load alert history on mount
+  useEffect(() => {
+    setAlerts(getAlertHistory());
+  }, []);
 
   // ── Export CSV ──
   const handleExport = useCallback(() => {
@@ -825,6 +895,48 @@ export default function DataPage() {
           )}
 
           {/* KPI Cards Grid — 3x2 desktop, 2x2 tablet, 2x1 mobile */}
+
+          {/* Alert Banner */}
+          {alerts.filter(a => {
+            const ts = new Date(a.timestamp).getTime();
+            return Date.now() - ts < 30 * 60 * 1000;
+          }).length > 0 && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 animate-fade-in">
+              <div className="flex items-center gap-2 mb-2">
+                <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">异动告警</span>
+                {lastRefresh && (
+                  <span className="ml-auto text-[10px] text-amber-500 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    上次刷新: {lastRefresh}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                {alerts.filter(a => {
+                  const ts = new Date(a.timestamp).getTime();
+                  return Date.now() - ts < 30 * 60 * 1000;
+                }).slice(0, 3).map(a => (
+                  <div key={a.id} className="flex items-center gap-2 text-sm">
+                    <span className={`inline-flex items-center gap-0.5 font-medium ${
+                      a.direction === "down" ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                    }`}>
+                      {a.direction === "down" ? <TrendingDown className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                      {a.metric} {a.direction === "down" ? "下降" : "上升"} {Math.abs(a.change)}%
+                    </span>
+                    <span className="text-xs text-amber-600/70 dark:text-amber-400/70">
+                      {a.currentValue}（上期 {a.previousValue}）
+                    </span>
+                    <span className="text-[10px] text-gray-400 ml-auto">
+                      {new Date(a.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* KPI Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {metrics.map(metric => (
               <KpiCard

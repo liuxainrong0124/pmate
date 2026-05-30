@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, X, Send, MessageSquare, Trash2 } from "lucide-react";
+import { Search, Plus, X, Send, MessageSquare, Trash2, Lock } from "lucide-react";
+import { canEdit } from "@/lib/permissions";
 import {
   PoolRequirement,
   getPoolRequirements,
@@ -298,12 +299,18 @@ export function RequirementsPool() {
         </select>
 
         {/* Create button */}
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-        >
-          <Plus className="w-4 h-4" />新建需求
-        </button>
+        {canEdit() ? (
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+          >
+            <Plus className="w-4 h-4" />新建需求
+          </button>
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <Lock className="w-3.5 h-3.5" />只读模式
+          </span>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════ List ═══════════════════════════════════════════ */}
@@ -503,18 +510,26 @@ export function RequirementsPool() {
 
               {/* Actions */}
               <div className="flex gap-2 pt-1">
-                <button
-                  onClick={saveDrawer}
-                  className="flex-1 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2.5 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-                >
-                  保存
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(selectedReq.id)}
-                  className="rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canEdit() ? (
+                  <>
+                    <button
+                      onClick={saveDrawer}
+                      className="flex-1 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2.5 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                    >
+                      保存
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(selectedReq.id)}
+                      className="rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400 flex items-center gap-1.5 py-2">
+                    <Lock className="w-3.5 h-3.5" />只读模式 — 无法编辑或删除
+                  </p>
+                )}
               </div>
 
               {/* ── Comments section ── */}

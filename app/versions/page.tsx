@@ -11,6 +11,7 @@ import {
   addLog,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { canEdit } from "@/lib/permissions";
 import { VersionDetail } from "@/components/versions/version-detail";
 import { VersionForm } from "@/components/versions/version-form";
 import { ReleaseRetro } from "@/components/versions/release-retro";
@@ -104,15 +105,17 @@ export default function VersionsPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">版本管理</h1>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">版本规划、需求关联、发布与复盘</p>
           </div>
-          <div className="ml-auto">
-            <Button
-              onClick={() => { setEditTarget(null); setFormOpen(true); }}
-              className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-sm"
-              size="sm"
-            >
-              <Plus className="w-4 h-4 mr-1.5" />新建版本
-            </Button>
-          </div>
+          {canEdit() && (
+            <div className="ml-auto">
+              <Button
+                onClick={() => { setEditTarget(null); setFormOpen(true); }}
+                className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-sm"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />新建版本
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -190,29 +193,33 @@ export default function VersionsPage() {
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => openEdit(v)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                              title="编辑"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            {v.status !== "released" && (
-                              <button
-                                onClick={() => handleReleaseClick(v)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                                title="发布"
-                              >
-                                <Rocket className="w-3.5 h-3.5" />
-                              </button>
+                            {canEdit() && (
+                              <>
+                                <button
+                                  onClick={() => openEdit(v)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                  title="编辑"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                {v.status !== "released" && (
+                                  <button
+                                    onClick={() => handleReleaseClick(v)}
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                                    title="发布"
+                                  >
+                                    <Rocket className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setDeleteConfirm(v.id)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
                             )}
-                            <button
-                              onClick={() => setDeleteConfirm(v.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="删除"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </td>
                       </tr>

@@ -12,6 +12,7 @@ import {
   StoredExperiment,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { canEdit } from "@/lib/permissions";
 import { ExperimentForm } from "@/components/experiments/experiment-form";
 import { ExperimentDetail } from "@/components/experiments/experiment-detail";
 import { ExperimentResult } from "@/components/experiments/experiment-result";
@@ -153,10 +154,12 @@ export default function ExperimentsPage() {
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">创建和管理 A/B 测试，驱动数据决策</p>
             </div>
           </div>
-          <Button onClick={handleCreate} className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-sm">
-            <Plus className="w-4 h-4" />
-            创建实验
-          </Button>
+          {canEdit() && (
+            <Button onClick={handleCreate} className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-sm">
+              <Plus className="w-4 h-4" />
+              创建实验
+            </Button>
+          )}
         </div>
       </div>
 
@@ -245,7 +248,7 @@ export default function ExperimentsPage() {
 
               {/* Card Footer / Actions */}
               <div className="px-4 pb-3 pt-1 border-t border-gray-50 dark:border-gray-800/50 flex items-center gap-1 flex-wrap">
-                {exp.status === "draft" && (
+                {exp.status === "draft" && canEdit() && (
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEdit(exp); }}
@@ -269,7 +272,7 @@ export default function ExperimentsPage() {
                     </button>
                   </>
                 )}
-                {exp.status === "running" && (
+                {exp.status === "running" && canEdit() && (
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEnd(exp); }}
@@ -295,12 +298,14 @@ export default function ExperimentsPage() {
                       <FileText className="w-3 h-3" />
                       查看报告
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(exp); }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors ml-auto"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {canEdit() && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(exp); }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors ml-auto"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </>
                 )}
               </div>

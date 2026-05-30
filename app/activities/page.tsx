@@ -17,6 +17,7 @@ import {
   StoredActivity,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { canEdit } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -196,16 +197,18 @@ export default function ActivitiesPage() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-6 animate-fade-in">
-        <Button
-          onClick={() => {
-            setPrefillDate("");
-            setEditingActivity(undefined);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          新建活动
-        </Button>
+        {canEdit() && (
+          <Button
+            onClick={() => {
+              setPrefillDate("");
+              setEditingActivity(undefined);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            新建活动
+          </Button>
+        )}
 
         <div className="flex gap-1 bg-gray-100/60 dark:bg-gray-800 p-1 rounded-xl">
           <button
@@ -499,48 +502,52 @@ export default function ActivitiesPage() {
                               size="xs"
                               variant="ghost"
                               onClick={() => {
-                                setPrefillDate("");
-                                setEditingActivity(act);
-                                setFormOpen(true);
+                                setEffectActivity(act);
                               }}
                             >
-                              编辑
+                              效果
                             </Button>
-                            {act.status === "ended" && (
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => setEffectActivity(act)}
-                              >
-                                效果
-                              </Button>
+                            {canEdit() && (
+                              <>
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setPrefillDate("");
+                                    setEditingActivity(act);
+                                    setFormOpen(true);
+                                  }}
+                                >
+                                  编辑
+                                </Button>
+                                {act.status === "upcoming" && (
+                                  <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => handleStatusChange(act, "active")}
+                                  >
+                                    启动
+                                  </Button>
+                                )}
+                                {act.status === "active" && (
+                                  <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => handleStatusChange(act, "ended")}
+                                  >
+                                    结束
+                                  </Button>
+                                )}
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  onClick={() => handleDelete(act.id)}
+                                  className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                >
+                                  删除
+                                </Button>
+                              </>
                             )}
-                            {act.status === "upcoming" && (
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => handleStatusChange(act, "active")}
-                              >
-                                启动
-                              </Button>
-                            )}
-                            {act.status === "active" && (
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => handleStatusChange(act, "ended")}
-                              >
-                                结束
-                              </Button>
-                            )}
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              onClick={() => handleDelete(act.id)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                            >
-                              删除
-                            </Button>
                           </div>
                         </td>
                       </tr>
