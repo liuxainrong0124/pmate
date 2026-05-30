@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/supabase/auth-context";
+import { getRoleLabel } from "@/lib/permissions";
 import {
   LayoutDashboard, FileText, BarChart3, Users, Megaphone, TrendingUp,
   ChevronLeft, ChevronRight, Settings, Sparkles, BookOpen, GitBranch,
-  CalendarDays, FlaskConical,
+  CalendarDays, FlaskConical, LogOut,
 } from "lucide-react";
 
 const mainItems = [
@@ -25,6 +27,7 @@ const mainItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user, role, signOut } = useAuth();
 
   // Hide sidebar on landing page
   if (pathname === "/") return null;
@@ -88,6 +91,36 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className={`p-3 border-t border-gray-50 dark:border-gray-800 ${collapsed ? "flex flex-col items-center gap-1" : ""}`}>
+        {/* User info */}
+        {user && (
+          <div className={`mb-2 ${collapsed ? "w-full flex justify-center" : ""}`}>
+            {collapsed ? (
+              <div className="w-8 h-8 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 text-xs font-semibold">
+                {user.email?.[0].toUpperCase()}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 px-3 py-2">
+                <div className="w-8 h-8 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 text-xs font-semibold shrink-0">
+                  {user.email?.[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {user.email?.split("@")[0]}
+                  </div>
+                  <div className="text-[10px] text-gray-400">{getRoleLabel(role)}</div>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  title="退出登录"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <Link
           href="/team"
           className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-200 ${

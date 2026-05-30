@@ -6,6 +6,9 @@ import { MainContent } from "@/components/layout/main-content";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { ToastContainer } from "@/components/shared/toast";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { AuthProvider } from "@/lib/supabase/auth-context";
+import { AuthGuard } from "@/components/layout/auth-guard";
+import { SyncManager } from "@/components/layout/sync-manager";
 
 const inter = Inter({ subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -41,9 +44,14 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} ${jetbrainsMono.variable} bg-background`}>
         <ThemeProvider>
-          <Sidebar />
-          <MainContent>{children}</MainContent>
-          <MobileTabBar />
+          <AuthProvider>
+            <AuthGuard>
+              <SyncManager />
+              <Sidebar />
+              <MainContent>{children}</MainContent>
+              <MobileTabBar />
+            </AuthGuard>
+          </AuthProvider>
           <ToastContainer />
         </ThemeProvider>
       </body>

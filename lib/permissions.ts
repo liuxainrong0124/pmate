@@ -1,10 +1,20 @@
-import { getCurrentUserRole } from "@/lib/store/local-store";
+let _authRole: Role | null = null;
 
 export type Role = "admin" | "member" | "viewer";
 
-/** Get current user role (default admin) */
+/** Called by AuthGuard to sync Supabase role into permissions */
+export function syncAuthRole(role: Role | null) {
+  _authRole = role;
+}
+
+/** Get current user role (auth context first, localStorage fallback) */
 export function getUserRole(): Role {
-  return getCurrentUserRole();
+  if (_authRole) return _authRole;
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("pulse_user_role");
+    if (stored === "admin" || stored === "member" || stored === "viewer") return stored;
+  }
+  return "admin"; // default for local dev
 }
 
 /** Check if current user can edit/delete content */
@@ -18,7 +28,7 @@ export function canManageTeam(): boolean {
   return getUserRole() === "admin";
 }
 
-/** Check if current user can view - always true, but used for conditional UI */
+/** Check if current user can view - always true */
 export function canView(): boolean {
   return true;
 }
