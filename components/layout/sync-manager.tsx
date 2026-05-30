@@ -13,7 +13,11 @@ export function SyncManager() {
       setSyncUserId(user.id);
       if (!syncedRef.current) {
         syncedRef.current = true;
-        bidirectionalSync().catch(() => {});
+        // Delay initial sync to avoid blocking page render
+        const timer = setTimeout(() => {
+          bidirectionalSync().catch(() => {});
+        }, 2000);
+        return () => clearTimeout(timer);
       }
     } else {
       clearSyncUserId();
@@ -21,12 +25,12 @@ export function SyncManager() {
     }
   }, [user]);
 
-  // Periodic sync every 60 seconds when authenticated
+  // Periodic sync every 5 minutes when authenticated
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(() => {
       bidirectionalSync().catch(() => {});
-    }, 60000);
+    }, 300000);
     return () => clearInterval(interval);
   }, [user]);
 

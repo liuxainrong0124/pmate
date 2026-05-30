@@ -25,14 +25,30 @@ const AuthContext = createContext<AuthState>({
   signOut: async () => {},
 });
 
+const ROLE_CACHE_KEY = "pulse_cached_role";
+
+function getCachedRole(): Role {
+  if (typeof window === "undefined") return "member";
+  const cached = localStorage.getItem(ROLE_CACHE_KEY);
+  if (cached === "admin" || cached === "member" || cached === "viewer") return cached;
+  return "member";
+}
+
+function setCachedRole(role: Role) {
+  localStorage.setItem(ROLE_CACHE_KEY, role);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<Role>("member");
+  const [role, setRole] = useState<Role>(getCachedRole);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -44,27 +60,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        if (cancelled) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchProfile(session.user.id);
         } else {
-          setRole("member");
+          setRole(getCachedRole());
           setLoading(false);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Safety: hide loading after 3s even if Supabase doesn't respond
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .single();
-    setRole((data?.role as Role) || "member");
+    // Use cached role immediately for fast UI
+    const cached = getCachedRole();
+
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      const remoteRole = (data?.role as Role) || cached;
+      setRole(remoteRole);
+      setCachedRole(remoteRole);
+    } catch {
+      setRole(cached);
+    }
     setLoading(false);
   };
 
@@ -89,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRole("member");
+    setCachedRole("member");
   }, []);
 
   return (
