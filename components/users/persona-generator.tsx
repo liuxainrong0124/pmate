@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mockPersonas, mockSegments, UserPersona } from "@/lib/mock/user-data";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Target, AlertCircle, Lightbulb, Quote, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, Target, AlertCircle, Lightbulb, Quote, ArrowRight, Loader2, Database } from "lucide-react";
 import Link from "next/link";
-import { getUserApiKey } from "@/lib/store/local-store";
+import { getUserApiKey, getFeedbackHistory } from "@/lib/store/local-store";
 
 function PersonaCard({ persona }: { persona: UserPersona }) {
   const segment = mockSegments.find((s) => s.name === persona.segmentName);
@@ -111,6 +111,14 @@ export function PersonaGenerator() {
   const [showGenerated, setShowGenerated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDemoData, setIsDemoData] = useState(false);
+  const [feedbackCount, setFeedbackCount] = useState(0);
+  const [totalFeedbackCount, setTotalFeedbackCount] = useState(0);
+
+  // Load feedback count on mount
+  useEffect(() => {
+    const fb = getFeedbackHistory();
+    setTotalFeedbackCount(fb.length);
+  }, []);
 
   const filtered = selectedSegment === "all"
     ? personas
@@ -121,8 +129,31 @@ export function PersonaGenerator() {
     setShowGenerated(false);
     setError(null);
     setIsDemoData(false);
+    setFeedbackCount(0);
     try {
       const seg = mockSegments.find((s) => s.name === selectedSegment) || mockSegments[0];
+
+      // Gather real feedback data
+      const allFeedback = getFeedbackHistory();
+      // Filter feedback relevant to this segment based on sentiment patterns:
+      // heavy users → more positive, churned/at_risk → more negative
+      let relevantFeedback = allFeedback;
+      if (selectedSegment === "重度用户") {
+        relevantFeedback = allFeedback.filter(f => f.sentiment === "positive");
+      } else if (selectedSegment === "流失风险" || selectedSegment === "已流失") {
+        relevantFeedback = allFeedback.filter(f => f.sentiment === "negative");
+      }
+      // If filtered too few, use all
+      if (relevantFeedback.length < 2) relevantFeedback = allFeedback;
+
+      const feedbacks = relevantFeedback.slice(0, 15).map(f => ({
+        quote: f.quote,
+        sentiment: f.sentiment,
+        category: f.category,
+        source: f.source,
+      }));
+      setFeedbackCount(feedbacks.length);
+
       const res = await fetch("/api/persona/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,6 +161,7 @@ export function PersonaGenerator() {
           segmentName: seg.name,
           segmentDesc: seg.strategy,
           characteristics: seg.characteristics,
+          feedbacks,
         }),
       });
       if (res.ok) {
@@ -211,10 +243,25 @@ export function PersonaGenerator() {
               : "bg-emerald-50 border border-emerald-100 text-emerald-700"
           }`}>
             <Lightbulb className="w-4 h-4 shrink-0" />
-            {isDemoData
-              ? `当前为演示数据，显示 ${filtered.length} 个示例画像`
-              : `AI 已基于用户分群数据生成了 ${filtered.length} 个画像`
-            }
+            <div className="flex-1">
+              {isDemoData
+                ? `当前为演示数据，显示 ${filtered.length} 个示例画像`
+                : `AI 已基于用户分群数据生成了 ${filtered.length} 个画像`
+              }
+              {!isDemoData && feedbackCount > 0 && (
+                <span className="ml-2 text-xs opacity-80">
+                  <span className="inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full bg-white/50">
+                    <Database className="w-3 h-3" />基于 {feedbackCount} 条真实反馈
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        {totalFeedbackCount === 0 && !isDemoData && !showGenerated && !error && (
+          <div className="mt-3 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700">
+            <Database className="w-4 h-4 shrink-0" />
+            暂无真实反馈数据。画像将仅基于分群特征生成，前往<Link href="/feedback" className="underline font-medium mx-1">反馈分析</Link>添加真实反馈以获得更精准的画像。
           </div>
         )}
         {error && (

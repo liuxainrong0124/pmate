@@ -45,7 +45,7 @@ export function EntryScreen() {
   }, [theme, setTheme]);
 
   const handleEnter = useCallback(() => {
-    router.push("/dashboard");
+    router.push("/login");
   }, [router]);
 
   useEffect(() => {
@@ -191,7 +191,7 @@ export function EntryScreen() {
       if (isDark) {
         sky.addColorStop(0, "#0D0D1A"); sky.addColorStop(0.5, "#141428"); sky.addColorStop(1, "#1A1430");
       } else {
-        sky.addColorStop(0, "#FDF8F2"); sky.addColorStop(0.4, "#FEF9F5"); sky.addColorStop(1, "#F5EDE0");
+        sky.addColorStop(0, "#E8D5C8"); sky.addColorStop(0.4, "#F0E0D6"); sky.addColorStop(1, "#D8C8B8");
       }
       ctx!.fillStyle = sky;
       ctx!.fillRect(0, 0, W, H);
@@ -345,7 +345,7 @@ export function EntryScreen() {
       if (isDark) {
         g.addColorStop(0, "#2A2A20"); g.addColorStop(0.3, "#25251C"); g.addColorStop(1, "#1A1A14");
       } else {
-        g.addColorStop(0, "#C8C0A8"); g.addColorStop(0.3, "#B8B898"); g.addColorStop(0.7, "#A0A878"); g.addColorStop(1, "#909868");
+        g.addColorStop(0, "#B8A88A"); g.addColorStop(0.3, "#A89878"); g.addColorStop(0.7, "#988868"); g.addColorStop(1, "#887858");
       }
       ctx!.fillStyle = g;
       ctx!.beginPath();
@@ -692,7 +692,7 @@ export function EntryScreen() {
   }, []);
 
   return (
-    <div id="entry-screen" className="fixed inset-0 z-[200] cursor-default">
+    <div id="entry-screen" className="fixed inset-0 z-[200] cursor-default bg-[#E8D5C8] dark:bg-[#0D0D1A]">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
       {/* Theme toggle */}
       <button

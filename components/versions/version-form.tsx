@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -31,20 +31,30 @@ export function VersionForm({ open, onClose, version, onSaved }: VersionFormProp
 
   const members = getMembers();
   const isEdit = !!version;
+  const initialRef = useRef({ version: "", name: "", description: "", plannedDate: "", assignee: "" });
 
   useEffect(() => {
     if (version) {
-      setForm({
-        version: version.version,
-        name: version.name,
-        description: version.description,
-        plannedDate: version.plannedDate,
-        assignee: version.assignee,
-      });
+      const v = { version: version.version, name: version.name, description: version.description, plannedDate: version.plannedDate, assignee: version.assignee };
+      setForm(v);
+      initialRef.current = v;
     } else {
-      setForm({ version: "", name: "", description: "", plannedDate: "", assignee: "" });
+      const v = { version: "", name: "", description: "", plannedDate: "", assignee: "" };
+      setForm(v);
+      initialRef.current = v;
     }
   }, [version, open]);
+
+  const isDirty = () => {
+    const init = initialRef.current;
+    return form.version !== init.version || form.name !== init.name ||
+      form.description !== init.description || form.plannedDate !== init.plannedDate || form.assignee !== init.assignee;
+  };
+
+  const handleClose = () => {
+    if (isDirty() && !window.confirm("有未保存的内容，确定离开吗？")) return;
+    onClose();
+  };
 
   const update = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -83,7 +93,7 @@ export function VersionForm({ open, onClose, version, onSaved }: VersionFormProp
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] rounded-2xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "编辑版本" : "新建版本"}</DialogTitle>
@@ -153,7 +163,7 @@ export function VersionForm({ open, onClose, version, onSaved }: VersionFormProp
           </div>
         </div>
         <DialogFooter className="gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} className="rounded-xl">取消</Button>
+          <Button variant="outline" onClick={handleClose} className="rounded-xl">取消</Button>
           <Button
             onClick={handleSave}
             disabled={!form.version.trim() || !form.name.trim()}

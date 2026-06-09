@@ -294,7 +294,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Alert enable toggle */}
-          <div className="flex items-center gap-4 p-4">
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50">
             <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
               <AlertTriangle className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
             </div>
@@ -318,12 +318,350 @@ export default function SettingsPage() {
               }`} />
             </button>
           </div>
+
+          {/* Webhook URL */}
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Bell className="w-4 h-4 text-gray-500" />
+              <h3 className="font-semibold text-sm text-gray-900">Webhook 通知</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">
+              告警触发时向此 URL 发送 POST 请求，支持飞书/钉钉/企微/Slack 机器人
+            </p>
+            <input
+              type="text"
+              placeholder="https://hooks.example.com/webhook..."
+              value={alertSettings?.webhookUrl || ""}
+              onChange={(e) => {
+                const next = { webhookUrl: e.target.value };
+                setAlertSettings({ ...alertSettings!, ...next });
+                saveAlertSettings(next);
+              }}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-violet-400"
+            />
+            {alertSettings?.webhookUrl && (
+              <button
+                onClick={async () => {
+                  showToast("正在测试 Webhook...", "info");
+                  try {
+                    await fetch(alertSettings!.webhookUrl, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ text: "Pulse 测试消息 — Webhook 连接成功！" }),
+                    });
+                    showToast("Webhook 测试成功", "success");
+                  } catch {
+                    showToast("Webhook 测试失败，请检查 URL", "error");
+                  }
+                }}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors"
+              >
+                测试 Webhook
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Workbench Preferences */}
+      <section className="mb-8 animate-fade-in">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">工作台偏好</h2>
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+          {/* Default Home */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+              <Monitor className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">默认首页</p>
+              <p className="text-xs text-gray-400 mt-0.5">登录后首先显示的页面</p>
+            </div>
+            <select
+              value={settings.defaultHome}
+              onChange={(e) => update({ defaultHome: e.target.value })}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5"
+            >
+              <option value="dashboard">仪表盘</option>
+              <option value="requirements">需求中心</option>
+              <option value="data">数据洞察</option>
+            </select>
+          </div>
+
+          {/* Default Time Range */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+              <Monitor className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">默认数据时间范围</p>
+              <p className="text-xs text-gray-400 mt-0.5">数据洞察的默认查看周期</p>
+            </div>
+            <select
+              value={settings.defaultTimeRange}
+              onChange={(e) => update({ defaultTimeRange: e.target.value })}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5"
+            >
+              <option value="today">今日</option>
+              <option value="week">本周</option>
+              <option value="month">本月</option>
+            </select>
+          </div>
+
+          {/* Page Size */}
+          <div className="flex items-center gap-4 p-4">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+              <Monitor className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">列表每页显示</p>
+              <p className="text-xs text-gray-400 mt-0.5">需求池、活动列表等的分页大小</p>
+            </div>
+            <select
+              value={String(settings.pageSize)}
+              onChange={(e) => update({ pageSize: Number(e.target.value) })}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5"
+            >
+              <option value="10">10 条</option>
+              <option value="20">20 条</option>
+              <option value="50">50 条</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Config */}
+      <section className="mb-8 animate-fade-in">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">AI 配置</h2>
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+          {/* Default AI Style */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+              <Key className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">默认文案风格</p>
+              <p className="text-xs text-gray-400 mt-0.5">AI 生成内容的默认语气</p>
+            </div>
+            <select
+              value={settings.defaultAIStyle}
+              onChange={(e) => update({ defaultAIStyle: e.target.value })}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5"
+            >
+              <option value="all">全部风格</option>
+              <option value="professional">专业</option>
+              <option value="friendly">亲切</option>
+              <option value="urgent">紧迫</option>
+            </select>
+          </div>
+
+          {/* Default AI Length */}
+          <div className="flex items-center gap-4 p-4 border-b border-gray-50 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+              <Key className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">默认文案长度</p>
+              <p className="text-xs text-gray-400 mt-0.5">AI 生成内容的默认长度</p>
+            </div>
+            <select
+              value={settings.defaultAILength}
+              onChange={(e) => update({ defaultAILength: e.target.value })}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5"
+            >
+              <option value="short">极短 (20-30字)</option>
+              <option value="medium">标准 (50-80字)</option>
+              <option value="long">详细 (120-180字)</option>
+              <option value="full">长文 (300-500字)</option>
+            </select>
+          </div>
+
+          {/* Test Connection */}
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">测试 API 连接</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {settings.deepseekApiKey ? "验证 Key 是否有效" : "请先配置 API Key"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!settings.deepseekApiKey) {
+                    showToast("请先填写 API Key", "error");
+                    return;
+                  }
+                  showToast("正在测试连接...", "info");
+                  try {
+                    const res = await fetch("/api/ai/test", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ apiKey: settings.deepseekApiKey }),
+                    });
+                    if (res.ok) {
+                      showToast("连接成功！API Key 有效", "success");
+                    } else {
+                      const d = await res.json().catch(() => ({}));
+                      showToast((d as { error?: string }).error || "连接失败", "error");
+                    }
+                  } catch {
+                    showToast("网络错误，无法连接", "error");
+                  }
+                }}
+                disabled={!settings.deepseekApiKey}
+                className="px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-xs font-medium transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 inline mr-1.5" />
+                测试连接
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Multi-Channel Notification Config */}
+      <section className="mb-8 animate-fade-in">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">多渠道通知</h2>
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+          {[
+            { key: "feishuWebhook" as const, label: "飞书机器人", placeholder: "https://open.feishu.cn/open-apis/bot/v2/hook/...", icon: "🪶" },
+            { key: "dingtalkWebhook" as const, label: "钉钉机器人", placeholder: "https://oapi.dingtalk.com/robot/send?access_token=...", icon: "📌" },
+            { key: "wecomWebhook" as const, label: "企业微信机器人", placeholder: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...", icon: "💬" },
+          ].map((ch, idx) => (
+            <div key={ch.key} className={`flex items-center gap-4 p-4 ${idx < 2 ? "border-b border-gray-50 dark:border-gray-800" : ""}`}>
+              <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0 text-lg">{ch.icon}</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{ch.label}</p>
+                <input
+                  type="text"
+                  placeholder={ch.placeholder}
+                  value={(settings as unknown as Record<string, string>)[ch.key] || ""}
+                  onChange={(e) => update({ [ch.key]: e.target.value } as Partial<StoredSettings>)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-violet-400"
+                />
+              </div>
+            </div>
+          ))}
+          {/* SMTP */}
+          <div className="p-4 border-t border-gray-50 dark:border-gray-800">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-lg">📧</span>
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">SMTP 邮件</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-medium text-gray-400 mb-0.5 block">SMTP 服务器</label>
+                <input
+                  type="text"
+                  placeholder="smtp.example.com"
+                  value={settings.smtpHost || ""}
+                  onChange={(e) => update({ smtpHost: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-gray-400 mb-0.5 block">端口</label>
+                <input
+                  type="text"
+                  placeholder="587"
+                  value={settings.smtpPort || ""}
+                  onChange={(e) => update({ smtpPort: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-gray-400 mb-0.5 block">用户名</label>
+                <input
+                  type="text"
+                  placeholder="user@example.com"
+                  value={settings.smtpUser || ""}
+                  onChange={(e) => update({ smtpUser: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-gray-400 mb-0.5 block">密码</label>
+                <input
+                  type="password"
+                  placeholder="SMTP 密码"
+                  value={settings.smtpPass || ""}
+                  onChange={(e) => update({ smtpPass: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Data Backup & Restore */}
+      <section className="mb-8 animate-fade-in">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">数据管理</h2>
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+            导出所有本地数据为 JSON 文件，或从备份文件中恢复数据。当前数据存储在浏览器 localStorage 中。
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                const store = localStorage.getItem("pulse_store") || "{}";
+                const blob = new Blob([store], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `pulse_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("数据已导出", "success");
+              }}
+              className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+            >
+              导出备份
+            </button>
+            <label className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+              导入恢复
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    try {
+                      const data = JSON.parse(reader.result as string);
+                      if (typeof data !== "object" || !data) throw new Error("无效格式");
+                      if (!confirm("导入将覆盖现有数据，确定继续吗？")) return;
+                      localStorage.setItem("pulse_store", JSON.stringify(data));
+                      showToast("数据已恢复，请刷新页面", "success");
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch {
+                      showToast("文件格式无效", "error");
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </label>
+            <button
+              onClick={() => {
+                if (!confirm("确定清除所有本地数据吗？此操作不可撤销，建议先导出备份。")) return;
+                localStorage.removeItem("pulse_store");
+                showToast("数据已清除，请刷新页面", "success");
+                setTimeout(() => window.location.reload(), 1500);
+              }}
+              className="px-4 py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              清除所有数据
+            </button>
+          </div>
         </div>
       </section>
 
       {/* API Key */}
       <section className="mb-8 animate-fade-in">
-        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">AI 配置</h2>
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">API 密钥</h2>
         <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5">
           <div className="flex items-center gap-3 mb-4">
             <Key className="w-4 h-4 text-gray-500" />

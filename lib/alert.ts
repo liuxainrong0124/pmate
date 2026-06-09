@@ -17,6 +17,7 @@ export interface AlertSettings {
   threshold: number; // percentage, e.g. 5 means ±5%
   autoRefresh: boolean;
   refreshIntervalMinutes: number;
+  webhookUrl: string;
 }
 
 const DEFAULT_ALERT_SETTINGS: AlertSettings = {
@@ -24,7 +25,34 @@ const DEFAULT_ALERT_SETTINGS: AlertSettings = {
   threshold: 5,
   autoRefresh: false,
   refreshIntervalMinutes: 5,
+  webhookUrl: "",
 };
+
+export function getUnreadAlertCount(): number {
+  const history = getAlertHistory();
+  const lastRead = getItem<string>("lastAlertReadAt", "");
+  if (!lastRead) return history.length;
+  return history.filter(a => a.timestamp > lastRead).length;
+}
+
+export function markAlertsRead() {
+  setItem("lastAlertReadAt", new Date().toISOString());
+}
+
+export async function sendWebhookAlert(record: AlertRecord) {
+  const settings = getAlertSettings();
+  if (!settings.webhookUrl) return;
+
+  try {
+    await fetch(settings.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `⚠️ Pulse 异动告警\n指标: ${record.metric}\n变化: ${record.change > 0 ? "+" : ""}${record.change}%\n当前值: ${record.currentValue}\n上期值: ${record.previousValue}\n时间: ${record.timestamp}`,
+      }),
+    });
+  } catch { /* silently fail */ }
+}
 
 export function getAlertSettings(): AlertSettings {
   return getItem<AlertSettings>("alertSettings", DEFAULT_ALERT_SETTINGS);
@@ -82,11 +110,14 @@ export function checkAnomaly(params: {
   };
 
   addAlertRecord(record);
+  const fullRecord = { ...record, id: `alert-${Date.now()}`, timestamp: new Date().toISOString() };
 
   sendNotification(
     `⚠️ ${params.label}${directionLabel}${absChange.toFixed(1)}%`,
     `当前 ${params.displayValue}，上期 ${params.displayPrev}，请关注`
   );
 
-  return { ...record, id: `alert-${Date.now()}`, timestamp: new Date().toISOString() };
+  sendWebhookAlert(fullRecord);
+
+  return fullRecord;
 }

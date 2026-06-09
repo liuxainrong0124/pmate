@@ -4,61 +4,80 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Heart, BarChart3, Gamepad2, Copy, Check, Megaphone } from "lucide-react";
+import { Loader2, Sparkles, Briefcase, Heart, Zap, Copy, Check, Megaphone, TrendingUp, Tag, Target } from "lucide-react";
 import { getUserApiKey, addContent } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
 
 interface CopyVariant {
   id: string;
-  style: "emotional" | "data" | "gamified";
+  style: "professional" | "friendly" | "urgent";
   title: string;
   body: string;
   cta: string;
-  icon: typeof Heart;
+  reasoning: string;
+  estimatedOpenRate: string;
+  recommendedScenario: string;
   color: string;
   label: string;
 }
 
 const styleMeta = {
-  emotional: { icon: Heart, color: "text-rose-500", bg: "bg-rose-50", label: "情感向" },
-  data: { icon: BarChart3, color: "text-blue-500", bg: "bg-blue-50", label: "数据向" },
-  gamified: { icon: Gamepad2, color: "text-purple-500", bg: "bg-purple-50", label: "游戏化" },
+  professional: { icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50", label: "专业", borderColor: "border-blue-200", cardBg: "bg-blue-50/30" },
+  friendly: { icon: Heart, color: "text-rose-500", bg: "bg-rose-50", label: "亲切", borderColor: "border-rose-200", cardBg: "bg-rose-50/30" },
+  urgent: { icon: Zap, color: "text-amber-600", bg: "bg-amber-50", label: "紧迫", borderColor: "border-amber-200", cardBg: "bg-amber-50/30" },
 };
 
-function generateMockCopy(targetUsers: string, purpose: string): CopyVariant[] {
-  const userLabel = targetUsers || "用户";
-  const purposeLabel = purpose || "提升活跃度";
+const lengthOptions = [
+  { value: "short", label: "极短", desc: "20-30字 · Push/短信" },
+  { value: "medium", label: "标准", desc: "50-80字 · 站内信" },
+  { value: "long", label: "详细", desc: "120-180字 · 活动页" },
+  { value: "full", label: "长文", desc: "300-500字 · 公众号" },
+];
 
+const styleOptions = [
+  { value: "all", label: "全部风格", desc: "三种风格各生成一个版本" },
+  { value: "professional", label: "专业", desc: "正式、数据驱动" },
+  { value: "friendly", label: "亲切", desc: "口语化、情感向" },
+  { value: "urgent", label: "紧迫", desc: "稀缺性、限时感" },
+];
+
+function getDemoCopies(): CopyVariant[] {
   return [
     {
       id: "v1",
-      style: "emotional",
-      title: `致每一位${userLabel}：我们听到了你的声音`,
-      body: `有时一个微小的改变，就能让体验焕然一新。\n\n这次更新，我们把${purposeLabel}这件事，变得更简单、更贴心。\n\n不是大改，是那些你提到过的、在意的小细节。\n\n打开看看，告诉我们你的感受。`,
-      cta: "去看看新变化 →",
-      icon: Heart,
-      color: "border-rose-200 bg-rose-50/30",
-      label: "情感向",
+      style: "professional",
+      title: "Q2 用户活跃度提升方案",
+      body: "📊 数据驱动增长：\n\n根据过去 30 天数据分析，核心功能日活有 12% 提升空间。我们建议从 3 个方向入手：新手引导优化、核心功能曝光提升、沉默用户召回。\n\n详细方案已上线，点击查看完整报告。",
+      cta: "查看数据 →",
+      reasoning: "数据论证充分，适合管理层汇报",
+      estimatedOpenRate: "25%",
+      recommendedScenario: "站内信、邮件",
+      color: "border-blue-200 bg-blue-50/30",
+      label: "专业",
     },
     {
       id: "v2",
-      style: "data",
-      title: `${purposeLabel}效率提升 40%：数据告诉你为什么该试试`,
-      body: `📊 已有 12,000+ ${userLabel}在使用的功能\n⏱ 平均节省 15 分钟 / 次\n⭐ 满意度评分 4.8/5.0\n\n我们做了 3 个关键改进：\n1. 流程简化 —— 从 5 步到 2 步\n2. 智能推荐 —— 基于你的使用习惯\n3. 一键复用 —— 历史记录快速调用`,
-      cta: "查看数据详情 →",
-      icon: BarChart3,
-      color: "border-blue-200 bg-blue-50/30",
-      label: "数据向",
+      style: "friendly",
+      title: "我们为你准备了一份小惊喜",
+      body: "嘿～\n\n最近收到很多用户反馈，我们花了 2 周时间，把你最常提到的 3 个问题都优化了。\n\n变化不大，但每一点都很贴心。\n\n打开看看，希望能让你省几分钟 ✨",
+      cta: "去看看 →",
+      reasoning: "口语化表达，建立情感连接",
+      estimatedOpenRate: "28%",
+      recommendedScenario: "App Push、社群分享",
+      color: "border-rose-200 bg-rose-50/30",
+      label: "亲切",
     },
     {
       id: "v3",
-      style: "gamified",
-      title: `🎯 挑战：成为${purposeLabel}高手`,
-      body: `恭喜！你已解锁「${purposeLabel}」新成就\n\n🏆 本周任务：\n□ 体验新功能（+10 经验值）\n□ 完成首次配置（+30 经验值）\n□ 邀请一位同事使用（+50 经验值）\n\n完成全部任务可获得专属徽章 + 7 天 VIP 体验`,
-      cta: "接受挑战 →",
-      icon: Gamepad2,
-      color: "border-purple-200 bg-purple-50/30",
-      label: "游戏化",
+      style: "urgent",
+      title: "⏰ 最后 24 小时：会员权益即将调整",
+      body: "重要提醒：\n\n现有会员权益方案将在 24 小时后调整，当前方案中的免费配送和专属客服权益将不再对新会员开放。\n\n现在续费，锁定当前权益方案。错过不再有。",
+      cta: "立即续费 →",
+      reasoning: "稀缺性+时间压力，驱动即时行动",
+      estimatedOpenRate: "32%",
+      recommendedScenario: "Push、短信、App 弹窗",
+      color: "border-amber-200 bg-amber-50/30",
+      label: "紧迫",
     },
   ];
 }
@@ -66,7 +85,9 @@ function generateMockCopy(targetUsers: string, purpose: string): CopyVariant[] {
 export function ContentGenerator({ initialPersona = "", initialSegment = "" }: { initialPersona?: string; initialSegment?: string }) {
   const [targetUsers, setTargetUsers] = useState(initialSegment || "");
   const [purpose, setPurpose] = useState("");
-  const [style, setStyle] = useState<string>("all");
+  const [length, setLength] = useState("medium");
+  const [aiStyle, setAiStyle] = useState("all");
+  const [filterStyle, setFilterStyle] = useState("all");
   const [variants, setVariants] = useState<CopyVariant[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -84,21 +105,33 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
       const res = await fetch("/api/push-copy/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: getUserApiKey() || '', targetUsers: targetUsers.trim(), purpose: purpose.trim() }),
+        body: JSON.stringify({
+          apiKey: getUserApiKey() || "",
+          targetUsers: targetUsers.trim(),
+          purpose: purpose.trim(),
+          length,
+          style: aiStyle,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.variants?.length) {
-          const mapped: CopyVariant[] = data.variants.map((v: Record<string, string>, i: number) => ({
-            id: `v${i + 1}`,
-            style: v.style as "emotional" | "data" | "gamified",
-            title: v.title,
-            body: v.body,
-            cta: v.cta,
-            icon: styleMeta[v.style as keyof typeof styleMeta]?.icon || Heart,
-            color: v.style === "emotional" ? "border-rose-200 bg-rose-50/30" : v.style === "data" ? "border-blue-200 bg-blue-50/30" : "border-purple-200 bg-purple-50/30",
-            label: styleMeta[v.style as keyof typeof styleMeta]?.label || "文案",
-          }));
+          const mapped: CopyVariant[] = data.variants.map((v: Record<string, string>, i: number) => {
+            const s = (v.style as keyof typeof styleMeta) || "professional";
+            const meta = styleMeta[s] || styleMeta.professional;
+            return {
+              id: `v${i + 1}`,
+              style: s as "professional" | "friendly" | "urgent",
+              title: v.title,
+              body: v.body,
+              cta: v.cta,
+              reasoning: v.reasoning || "",
+              estimatedOpenRate: v.estimatedOpenRate || "",
+              recommendedScenario: v.recommendedScenario || "",
+              color: `${meta.borderColor} ${meta.cardBg}`,
+              label: meta.label,
+            };
+          });
           setVariants(mapped);
           setSelectedId(null);
           setEditText("");
@@ -116,7 +149,7 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
   };
 
   const handleUseDemo = () => {
-    const generated = generateMockCopy(targetUsers, purpose);
+    const generated = getDemoCopies();
     setVariants(generated);
     setSelectedId(null);
     setEditText("");
@@ -142,7 +175,7 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
     showToast("已保存到素材库", "success");
   };
 
-  const filtered = style === "all" ? variants : variants.filter((v) => v.style === style);
+  const filtered = filterStyle === "all" ? variants : variants.filter((v) => v.style === filterStyle);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -180,6 +213,49 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
               className="rounded-xl border-gray-200"
             />
           </div>
+
+          {/* Length selector */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">文案长度</label>
+            <div className="grid grid-cols-4 gap-2">
+              {lengthOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLength(opt.value)}
+                  className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                    length === opt.value
+                      ? "border-gray-300 bg-gray-50 ring-1 ring-gray-200"
+                      : "border-gray-150 hover:border-gray-200"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-gray-900">{opt.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* AI Style selector */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">文案风格</label>
+            <div className="grid grid-cols-4 gap-2">
+              {styleOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setAiStyle(opt.value)}
+                  className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                    aiStyle === opt.value
+                      ? "border-gray-300 bg-gray-50 ring-1 ring-gray-200"
+                      : "border-gray-150 hover:border-gray-200"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-gray-900">{opt.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button
             onClick={handleGenerate}
             disabled={!purpose.trim() || isGenerating}
@@ -188,7 +264,7 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
             {isGenerating ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />生成中...</>
             ) : (
-              <><Sparkles className="mr-2 h-4 w-4" />生成文案</>
+              <><Sparkles className="mr-2 h-4 w-4" />AI 生成文案</>
             )}
           </Button>
 
@@ -211,26 +287,26 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
         </div>
       </div>
 
-      {/* Style Filter & Variants */}
+      {/* Filter & Variants */}
       {variants.length > 0 && (
         <>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-gray-400">文案风格:</span>
+            <span className="text-xs font-medium text-gray-400">筛选:</span>
             {isDemoData && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">演示数据</span>
             )}
             <div className="flex gap-1 bg-gray-100/60 p-0.5 rounded-lg">
               {[
                 { key: "all", label: "全部" },
-                { key: "emotional", label: "情感向" },
-                { key: "data", label: "数据向" },
-                { key: "gamified", label: "游戏化" },
+                { key: "professional", label: "专业" },
+                { key: "friendly", label: "亲切" },
+                { key: "urgent", label: "紧迫" },
               ].map((s) => (
                 <button
                   key={s.key}
-                  onClick={() => setStyle(s.key)}
+                  onClick={() => setFilterStyle(s.key)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    style === s.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                    filterStyle === s.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
                   }`}
                 >
                   {s.label}
@@ -241,7 +317,7 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {filtered.map((variant) => {
-              const meta = styleMeta[variant.style];
+              const meta = styleMeta[variant.style] || styleMeta.professional;
               const Icon = meta.icon;
               const isSelected = selectedId === variant.id;
 
@@ -271,12 +347,38 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
                   </div>
 
                   {/* Content */}
-                  <div className="px-5 pb-5">
-                    <h4 className="font-bold text-gray-900 mb-3 text-[15px] leading-snug">{variant.title}</h4>
-                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line mb-4">
+                  <div className="px-5 pb-4">
+                    <h4 className="font-bold text-gray-900 mb-2 text-[15px] leading-snug">{variant.title}</h4>
+                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line mb-3">
                       {variant.body}
                     </div>
-                    <div className="text-sm font-semibold text-gray-900">{variant.cta}</div>
+                    <div className="inline-block rounded-lg bg-gray-900 text-white text-xs font-medium px-3 py-1">
+                      {variant.cta}
+                    </div>
+                  </div>
+
+                  {/* Meta info */}
+                  <div className="px-5 pb-3 space-y-1.5">
+                    {variant.estimatedOpenRate && (
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <TrendingUp className="w-3 h-3 text-emerald-500" />
+                        <span className="text-gray-500">预估打开率</span>
+                        <span className="font-semibold text-emerald-600">{variant.estimatedOpenRate}</span>
+                      </div>
+                    )}
+                    {variant.recommendedScenario && (
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <Target className="w-3 h-3 text-blue-500" />
+                        <span className="text-gray-500">推荐场景</span>
+                        <span className="font-medium text-gray-700">{variant.recommendedScenario}</span>
+                      </div>
+                    )}
+                    {variant.reasoning && (
+                      <div className="flex items-start gap-1.5 text-[11px]">
+                        <Tag className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
+                        <span className="text-gray-500">{variant.reasoning}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -345,8 +447,8 @@ export function ContentGenerator({ initialPersona = "", initialSegment = "" }: {
       {variants.length === 0 && !isGenerating && (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white/50 p-10 text-center max-w-2xl">
           <Megaphone className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm mb-2">填写推送目的，AI 生成多风格文案</p>
-          <p className="text-gray-400 text-xs">同时生成情感向、数据向、游戏化三种风格，支持编辑和复制</p>
+          <p className="text-gray-500 text-sm mb-2">选择长度和风格，AI 生成精准文案</p>
+          <p className="text-gray-400 text-xs">支持极短/标准/详细/长文四种长度，专业/亲切/紧迫三种风格</p>
         </div>
       )}
     </div>

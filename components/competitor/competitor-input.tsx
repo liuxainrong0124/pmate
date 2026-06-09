@@ -9,11 +9,17 @@ import { Loader2, Sparkles } from "lucide-react";
 interface CompetitorInputProps {
   onSubmit: (competitors: string, context?: string) => void;
   isLoading: boolean;
+  onCompetitorsChange?: (text: string) => void;
 }
 
-export function CompetitorInput({ onSubmit, isLoading }: CompetitorInputProps) {
+export function CompetitorInput({ onSubmit, isLoading, onCompetitorsChange }: CompetitorInputProps) {
   const [competitors, setCompetitors] = useState("");
   const [context, setContext] = useState("");
+
+  const handleCompetitorsChange = (value: string) => {
+    setCompetitors(value);
+    onCompetitorsChange?.(value);
+  };
 
   const handleSubmit = () => {
     if (competitors.trim() && !isLoading) {
@@ -30,7 +36,7 @@ export function CompetitorInput({ onSubmit, isLoading }: CompetitorInputProps) {
         <Textarea
           placeholder="输入要分析的竞品，每行一个&#10;&#10;例如：&#10;Notion&#10;飞书文档&#10;Confluence"
           value={competitors}
-          onChange={(e) => setCompetitors(e.target.value)}
+          onChange={(e) => handleCompetitorsChange(e.target.value)}
           rows={5}
           className="resize-y min-h-[100px] border-gray-200 rounded-xl focus:border-amber-300 focus:ring-amber-50"
           disabled={isLoading}

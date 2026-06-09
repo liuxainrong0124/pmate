@@ -32,9 +32,29 @@ export const PERSONA_SYSTEM_PROMPT = `你是一个资深用户研究员，拥有
   ]
 }`;
 
-export function buildPersonaUserPrompt(segmentName: string, segmentDesc: string, characteristics: string[]): string {
+interface FeedbackInput {
+  quote: string;
+  sentiment: "positive" | "neutral" | "negative";
+  category: string;
+  source: string;
+}
+
+export function buildPersonaUserPrompt(
+  segmentName: string,
+  segmentDesc: string,
+  characteristics: string[],
+  feedbacks?: FeedbackInput[],
+): string {
   let p = `请为目标用户群构建一个生动的用户画像。\n\n用户分群：${segmentName}\n分群描述：${segmentDesc}`;
   if (characteristics.length > 0) p += `\n行为特征：${characteristics.join("、")}`;
-  p += `\n\n画像要求：真实姓名、具体职业、真实感的quote、可操作的痛点和目标。严格按JSON格式输出。`;
+
+  if (feedbacks && feedbacks.length > 0) {
+    p += `\n\n## 该分群用户的真实反馈数据（请基于这些真实反馈构建画像）`;
+    for (const f of feedbacks.slice(0, 20)) {
+      p += `\n- [${f.sentiment === "positive" ? "正面" : f.sentiment === "negative" ? "负面" : "中性"}] ${f.quote}（来源：${f.source}，分类：${f.category}）`;
+    }
+  }
+
+  p += `\n\n画像要求：真实姓名、具体职业、真实感的quote（优先参考真实反馈中的原话）、可操作的痛点和目标。严格按JSON格式输出。`;
   return p;
 }

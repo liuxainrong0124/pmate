@@ -123,7 +123,13 @@ export interface PoolRequirement {
   impact: number;
   effort: number;
   assignee: string;
+  backupAssignee: string;
   createdAt: string;
+  dueDate?: string;
+  deletedAt?: string;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvedAt?: string;
 }
 
 function generateReqId(existing: PoolRequirement[]): string {
@@ -135,20 +141,20 @@ function generateReqId(existing: PoolRequirement[]): string {
 }
 
 const DEFAULT_POOL_REQS: PoolRequirement[] = [
-  { id: "REQ-001", title: "用户个人主页改版", module: "用户中心", status: "in_progress", priority: "p0", impact: 9, effort: 7, assignee: "Alex", createdAt: "2026-05-20" },
-  { id: "REQ-002", title: "推送消息 A/B 测试", module: "运营中心", status: "planning", priority: "p0", impact: 8, effort: 4, assignee: "小明", createdAt: "2026-05-21" },
-  { id: "REQ-003", title: "数据看板导出功能", module: "数据洞察", status: "review", priority: "p1", impact: 6, effort: 3, assignee: "Alex", createdAt: "2026-05-19" },
-  { id: "REQ-004", title: "用户画像标签体系", module: "用户中心", status: "backlog", priority: "p1", impact: 7, effort: 8, assignee: "小红", createdAt: "2026-05-18" },
-  { id: "REQ-005", title: "竞品动态自动抓取", module: "竞品追踪", status: "planning", priority: "p2", impact: 5, effort: 6, assignee: "小明", createdAt: "2026-05-22" },
-  { id: "REQ-006", title: "异常场景知识库", module: "需求中心", status: "done", priority: "p2", impact: 4, effort: 2, assignee: "Alex", createdAt: "2026-05-15" },
-  { id: "REQ-007", title: "反馈情感趋势分析", module: "用户中心", status: "in_progress", priority: "p1", impact: 7, effort: 5, assignee: "小红", createdAt: "2026-05-23" },
-  { id: "REQ-008", title: "运营活动模板库", module: "运营中心", status: "backlog", priority: "p3", impact: 3, effort: 4, assignee: "小明", createdAt: "2026-05-24" },
-  { id: "REQ-009", title: "iOS 端适配优化", module: "基础设施", status: "planning", priority: "p1", impact: 6, effort: 5, assignee: "Alex", createdAt: "2026-05-25" },
-  { id: "REQ-010", title: "PRD 模板自定义", module: "需求中心", status: "backlog", priority: "p3", impact: 3, effort: 3, assignee: "小红", createdAt: "2026-05-26" },
+  { id: "REQ-001", title: "用户个人主页改版", module: "用户中心", status: "in_progress", priority: "p0", impact: 9, effort: 7, assignee: "Alex", backupAssignee: "", createdAt: "2026-05-20" },
+  { id: "REQ-002", title: "推送消息 A/B 测试", module: "运营中心", status: "planning", priority: "p0", impact: 8, effort: 4, assignee: "小明", backupAssignee: "", createdAt: "2026-05-21" },
+  { id: "REQ-003", title: "数据看板导出功能", module: "数据洞察", status: "review", priority: "p1", impact: 6, effort: 3, assignee: "Alex", backupAssignee: "小明", createdAt: "2026-05-19" },
+  { id: "REQ-004", title: "用户画像标签体系", module: "用户中心", status: "backlog", priority: "p1", impact: 7, effort: 8, assignee: "小红", backupAssignee: "", createdAt: "2026-05-18" },
+  { id: "REQ-005", title: "竞品动态自动抓取", module: "竞品追踪", status: "planning", priority: "p2", impact: 5, effort: 6, assignee: "小明", backupAssignee: "", createdAt: "2026-05-22" },
+  { id: "REQ-006", title: "异常场景知识库", module: "需求中心", status: "done", priority: "p2", impact: 4, effort: 2, assignee: "Alex", backupAssignee: "", createdAt: "2026-05-15" },
+  { id: "REQ-007", title: "反馈情感趋势分析", module: "用户中心", status: "in_progress", priority: "p1", impact: 7, effort: 5, assignee: "小红", backupAssignee: "Alex", createdAt: "2026-05-23" },
+  { id: "REQ-008", title: "运营活动模板库", module: "运营中心", status: "backlog", priority: "p3", impact: 3, effort: 4, assignee: "小明", backupAssignee: "", createdAt: "2026-05-24" },
+  { id: "REQ-009", title: "iOS 端适配优化", module: "基础设施", status: "planning", priority: "p1", impact: 6, effort: 5, assignee: "Alex", backupAssignee: "", createdAt: "2026-05-25" },
+  { id: "REQ-010", title: "PRD 模板自定义", module: "需求中心", status: "backlog", priority: "p3", impact: 3, effort: 3, assignee: "小红", backupAssignee: "", createdAt: "2026-05-26" },
 ];
 
 export function getPoolRequirements(): PoolRequirement[] {
-  return getItem<PoolRequirement[]>("poolRequirements", DEFAULT_POOL_REQS);
+  return getItem<PoolRequirement[]>("poolRequirements", DEFAULT_POOL_REQS).filter(r => !r.deletedAt);
 }
 
 export function setPoolRequirements(reqs: PoolRequirement[]) {
@@ -167,12 +173,99 @@ export function addPoolRequirement(req: Omit<PoolRequirement, "id" | "createdAt"
 export function updatePoolRequirement(id: string, updates: Partial<PoolRequirement>) {
   const reqs = getPoolRequirements();
   const idx = reqs.findIndex((r) => r.id === id);
-  if (idx >= 0) { reqs[idx] = { ...reqs[idx], ...updates }; }
+  if (idx >= 0) {
+    // Save version snapshot before updating
+    saveRequirementVersion({ ...reqs[idx] });
+    reqs[idx] = { ...reqs[idx], ...updates };
+  }
   setPoolRequirements(reqs);
 }
 
 export function deletePoolRequirement(id: string) {
+  // Soft delete — set deletedAt timestamp
+  const reqs = getPoolRequirements();
+  const idx = reqs.findIndex((r) => r.id === id);
+  if (idx >= 0) { reqs[idx].deletedAt = new Date().toISOString(); }
+  setPoolRequirements(reqs);
+}
+
+export function getTrashedPoolRequirements(): PoolRequirement[] {
+  return getPoolRequirements().filter(r => r.deletedAt);
+}
+
+export function restorePoolRequirement(id: string) {
+  const reqs = getPoolRequirements();
+  const idx = reqs.findIndex((r) => r.id === id);
+  if (idx >= 0) { delete reqs[idx].deletedAt; }
+  setPoolRequirements(reqs);
+}
+
+export function permanentlyDeletePoolRequirement(id: string) {
   setPoolRequirements(getPoolRequirements().filter((r) => r.id !== id));
+}
+
+export function emptyTrash() {
+  setPoolRequirements(getPoolRequirements().filter(r => !r.deletedAt));
+}
+
+export function approvePoolRequirement(id: string, approver: string) {
+  const reqs = getPoolRequirements();
+  const idx = reqs.findIndex((r) => r.id === id);
+  if (idx >= 0) {
+    reqs[idx].approvalStatus = "approved";
+    reqs[idx].approvedBy = approver;
+    reqs[idx].approvedAt = new Date().toISOString();
+    reqs[idx].status = "in_progress";
+  }
+  setPoolRequirements(reqs);
+}
+
+export function rejectPoolRequirement(id: string, approver: string) {
+  const reqs = getPoolRequirements();
+  const idx = reqs.findIndex((r) => r.id === id);
+  if (idx >= 0) {
+    reqs[idx].approvalStatus = "rejected";
+    reqs[idx].approvedBy = approver;
+    reqs[idx].approvedAt = new Date().toISOString();
+    reqs[idx].status = "backlog";
+  }
+  setPoolRequirements(reqs);
+}
+
+export function getPendingApprovals(): PoolRequirement[] {
+  return getPoolRequirements().filter(r => r.approvalStatus === "pending" && !r.deletedAt);
+}
+
+// ── Requirement Version History ──
+
+export interface StoredRequirementVersion {
+  id: string;
+  requirementId: string;
+  snapshot: PoolRequirement & { description?: string; acceptanceCriteria?: string; versionId?: string };
+  changedAt: string;
+  changedBy: string;
+}
+
+export function getRequirementVersions(requirementId: string): StoredRequirementVersion[] {
+  return getItem<StoredRequirementVersion[]>("requirementVersions", [])
+    .filter(v => v.requirementId === requirementId)
+    .sort((a, b) => b.changedAt.localeCompare(a.changedAt));
+}
+
+export function saveRequirementVersion(snapshot: PoolRequirement & { description?: string; acceptanceCriteria?: string; versionId?: string }) {
+  const versions = getItem<StoredRequirementVersion[]>("requirementVersions", []);
+  const entry: StoredRequirementVersion = {
+    id: `rv-${Date.now()}`,
+    requirementId: snapshot.id,
+    snapshot: { ...snapshot },
+    changedAt: new Date().toISOString(),
+    changedBy: getSettings().userName || "未知用户",
+  };
+  versions.push(entry);
+  // Keep max 100 versions total
+  if (versions.length > 100) versions.splice(0, versions.length - 100);
+  setItem("requirementVersions", versions);
+  return entry;
 }
 
 // ── Feedback History ──
@@ -209,6 +302,18 @@ export interface StoredSettings {
   deepseekApiKey: string;
   userName: string;
   email: string;
+  defaultHome: string;
+  defaultTimeRange: string;
+  pageSize: number;
+  defaultAIStyle: string;
+  defaultAILength: string;
+  feishuWebhook: string;
+  dingtalkWebhook: string;
+  wecomWebhook: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPass: string;
 }
 
 const DEFAULT_SETTINGS: StoredSettings = {
@@ -219,6 +324,18 @@ const DEFAULT_SETTINGS: StoredSettings = {
   deepseekApiKey: "",
   userName: "Pulse 用户",
   email: "",
+  defaultHome: "dashboard",
+  defaultTimeRange: "month",
+  pageSize: 20,
+  defaultAIStyle: "all",
+  defaultAILength: "medium",
+  feishuWebhook: "",
+  dingtalkWebhook: "",
+  wecomWebhook: "",
+  smtpHost: "",
+  smtpPort: "",
+  smtpUser: "",
+  smtpPass: "",
 };
 
 export function getSettings(): StoredSettings {
@@ -576,6 +693,206 @@ export function addLog(type: string, target: string, detail: string, operator?: 
 }
 export function clearLogs() {
   setItem("operationLogs", []);
+}
+
+// ── Competitor Tracking ──
+
+export interface StoredCompetitorAnalysis {
+  id: string;
+  competitors: string;
+  summary: string;
+  threats: number;
+  opportunities: number;
+  analyzedAt: string;
+}
+
+export function getCompetitorHistory(): StoredCompetitorAnalysis[] {
+  return getItem<StoredCompetitorAnalysis[]>("competitorHistory", []);
+}
+
+export function addCompetitorAnalysis(analysis: Omit<StoredCompetitorAnalysis, "id" | "analyzedAt">) {
+  const history = getCompetitorHistory();
+  const entry: StoredCompetitorAnalysis = {
+    ...analysis,
+    id: `comp-${Date.now()}`,
+    analyzedAt: new Date().toISOString(),
+  };
+  history.unshift(entry);
+  if (history.length > 20) history.length = 20;
+  setItem("competitorHistory", history);
+
+  // Auto-notify: compare with previous analysis for the same competitors
+  const prev = history.find(a => a.id !== entry.id && a.competitors === entry.competitors);
+  if (prev) {
+    const newThreats = entry.threats - prev.threats;
+    if (newThreats > 0) {
+      setItem("competitorUpdateCount", (getItem<number>("competitorUpdateCount", 0)) + 1);
+    }
+  }
+  return entry;
+}
+
+export function getCompetitorUpdateCount(): number {
+  return getItem<number>("competitorUpdateCount", 0);
+}
+
+export function clearCompetitorUpdateCount() {
+  setItem("competitorUpdateCount", 0);
+}
+
+// ── Monitored Competitors (auto-monitoring) ──
+
+export interface StoredMonitoredCompetitor {
+  id: string;
+  name: string;
+  url: string;
+  addedAt: string;
+  lastCheckedAt?: string;
+  lastNewsHash?: string; // to detect new content
+  enabled: boolean;
+}
+
+export function getMonitoredCompetitors(): StoredMonitoredCompetitor[] {
+  return getItem<StoredMonitoredCompetitor[]>("monitoredCompetitors", []);
+}
+
+export function addMonitoredCompetitor(comp: Omit<StoredMonitoredCompetitor, "id" | "addedAt" | "enabled">) {
+  const list = getMonitoredCompetitors();
+  if (list.some(c => c.name === comp.name)) return null;
+  const entry: StoredMonitoredCompetitor = {
+    ...comp,
+    id: `mon-${Date.now()}`,
+    addedAt: new Date().toISOString(),
+    enabled: true,
+  };
+  list.push(entry);
+  setItem("monitoredCompetitors", list);
+  return entry;
+}
+
+export function removeMonitoredCompetitor(id: string) {
+  setItem("monitoredCompetitors", getMonitoredCompetitors().filter(c => c.id !== id));
+}
+
+export function toggleMonitoredCompetitor(id: string) {
+  const list = getMonitoredCompetitors();
+  const idx = list.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  list[idx].enabled = !list[idx].enabled;
+  setItem("monitoredCompetitors", list);
+}
+
+export function updateMonitoredCompetitorCheck(id: string, newsHash: string) {
+  const list = getMonitoredCompetitors();
+  const idx = list.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const hadNewContent = list[idx].lastNewsHash && list[idx].lastNewsHash !== newsHash;
+  list[idx].lastCheckedAt = new Date().toISOString();
+  list[idx].lastNewsHash = newsHash;
+  setItem("monitoredCompetitors", list);
+  if (hadNewContent) {
+    setItem("competitorUpdateCount", getCompetitorUpdateCount() + 1);
+  }
+  return hadNewContent;
+}
+
+export function getMonitoredCompetitorNames(): string[] {
+  return getMonitoredCompetitors().filter(c => c.enabled).map(c => c.name);
+}
+
+// ── OKR ──
+
+export interface StoredKeyResult {
+  id: string;
+  text: string;
+  current: number;
+  target: number;
+  unit: string;
+  status: "on_track" | "at_risk" | "behind";
+}
+
+export interface StoredObjective {
+  id: string;
+  title: string;
+  description: string;
+  quarter: string;
+  status: "active" | "completed" | "cancelled";
+  progress: number;
+  keyResults: StoredKeyResult[];
+  owner: string;
+  createdAt: string;
+}
+
+const DEFAULT_OKRS: StoredObjective[] = [
+  {
+    id: "okr-1",
+    title: "提升用户活跃度",
+    description: "通过优化核心体验和推送策略，提升 DAU 和用户参与度",
+    quarter: "2026 Q2",
+    status: "active",
+    progress: 65,
+    owner: "Alex",
+    keyResults: [
+      { id: "kr-1", text: "DAU 从 10k 提升到 13k", current: 11500, target: 13000, unit: "人", status: "on_track" },
+      { id: "kr-2", text: "次日留存率从 35% 提升到 42%", current: 38, target: 42, unit: "%", status: "at_risk" },
+      { id: "kr-3", text: "推送打开率从 25% 提升到 32%", current: 28, target: 32, unit: "%", status: "on_track" },
+    ],
+    createdAt: "2026-04-01",
+  },
+  {
+    id: "okr-2",
+    title: "完善数据驱动决策体系",
+    description: "建设数据看板和分析工具，让团队基于数据做决策",
+    quarter: "2026 Q2",
+    status: "active",
+    progress: 40,
+    owner: "小明",
+    keyResults: [
+      { id: "kr-4", text: "完成 6 个核心指标看板搭建", current: 4, target: 6, unit: "个", status: "on_track" },
+      { id: "kr-5", text: "异动归因准确率达到 80%", current: 65, target: 80, unit: "%", status: "behind" },
+    ],
+    createdAt: "2026-04-01",
+  },
+];
+
+export function getObjectives(): StoredObjective[] {
+  return getItem<StoredObjective[]>("objectives", DEFAULT_OKRS);
+}
+
+export function setObjectives(obj: StoredObjective[]) {
+  setItem("objectives", obj);
+}
+
+export function addObjective(o: Omit<StoredObjective, "id" | "createdAt" | "progress">) {
+  const objectives = getObjectives();
+  const entry: StoredObjective = {
+    ...o,
+    id: `okr-${Date.now()}`,
+    progress: 0,
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
+  objectives.unshift(entry);
+  setObjectives(objectives);
+  return entry;
+}
+
+export function updateObjective(id: string, updates: Partial<StoredObjective>) {
+  const objectives = getObjectives();
+  const idx = objectives.findIndex((o) => o.id === id);
+  if (idx >= 0) {
+    const updated = { ...objectives[idx], ...updates };
+    // Recalculate progress from key results
+    const krs = updated.keyResults || [];
+    if (krs.length > 0) {
+      updated.progress = Math.round(krs.reduce((sum, kr) => sum + (kr.current / kr.target) * 100, 0) / krs.length);
+    }
+    objectives[idx] = updated;
+  }
+  setObjectives(objectives);
+}
+
+export function deleteObjective(id: string) {
+  setObjectives(getObjectives().filter((o) => o.id !== id));
 }
 
 // ── Current User Role ──

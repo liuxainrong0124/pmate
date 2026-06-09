@@ -3,13 +3,18 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { MetricWithHistory } from "@/lib/mock/metrics-data";
 import { AnomalyAttribution } from "@/components/data/anomaly-attribution";
+import { ComparisonAnalysis } from "@/components/data/comparison-analysis";
 import { DataUpload } from "@/components/data/data-upload";
+import { DataDictionary } from "@/components/data/data-dictionary";
+import { PredictionView } from "@/components/data/prediction-view";
+import { ReportGenerator } from "@/components/data/report-generator";
+import { NLQuery } from "@/components/data/nl-query";
 import { getUploadedMetrics, StoredMetric } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
 import { getAlertSettings, checkAnomaly, getAlertHistory, AlertRecord } from "@/lib/alert";
 import {
   BarChart3, TrendingUp, TrendingDown, Upload, AlertTriangle,
-  Download, X, Calendar, LineChart, AreaChart, Bell, Clock
+  Download, X, Calendar, LineChart, AreaChart, Bell, Clock, ArrowLeftRight, BookOpen, FileText, Sparkles
 } from "lucide-react";
 
 // ── Types ──
@@ -618,7 +623,7 @@ export default function DataPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "anomaly" | "upload">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "anomaly" | "comparison" | "upload" | "dictionary" | "prediction" | "report" | "nlquery">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMetric, setDrawerMetric] = useState<MetricWithHistory | null>(null);
   const [chartType, setChartType] = useState<ChartType>("line");
@@ -756,7 +761,12 @@ export default function DataPage() {
   const tabs = [
     { key: "dashboard" as const, label: "指标看板", icon: BarChart3 },
     { key: "anomaly" as const, label: "异动归因", icon: AlertTriangle },
+    { key: "comparison" as const, label: "对比分析", icon: ArrowLeftRight },
     { key: "upload" as const, label: "数据导入", icon: Upload },
+    { key: "dictionary" as const, label: "数据词典", icon: BookOpen },
+    { key: "prediction" as const, label: "趋势预测", icon: TrendingUp },
+    { key: "report" as const, label: "报告生成", icon: FileText },
+    { key: "nlquery" as const, label: "智能问答", icon: Sparkles },
   ];
 
   return (
@@ -957,8 +967,23 @@ export default function DataPage() {
       {/* ═══ Anomaly Tab ═══ */}
       {activeTab === "anomaly" && <AnomalyAttribution />}
 
+      {/* ═══ Comparison Tab ═══ */}
+      {activeTab === "comparison" && <ComparisonAnalysis metrics={metrics} />}
+
       {/* ═══ Upload Tab ═══ */}
       {activeTab === "upload" && <DataUpload />}
+
+      {/* ═══ Dictionary Tab ═══ */}
+      {activeTab === "dictionary" && <DataDictionary />}
+
+      {/* ═══ Prediction Tab ═══ */}
+      {activeTab === "prediction" && <PredictionView metrics={metrics} />}
+
+      {/* ═══ Report Tab ═══ */}
+      {activeTab === "report" && <ReportGenerator metrics={metrics} />}
+
+      {/* ═══ NL Query Tab ═══ */}
+      {activeTab === "nlquery" && <NLQuery metrics={metrics} />}
 
       {/* ═══ Metric Detail Drawer ═══ */}
       <MetricDrawer

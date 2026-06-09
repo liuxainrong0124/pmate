@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { AuthProvider } from "@/lib/supabase/auth-context";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { SyncManager } from "@/components/layout/sync-manager";
+import { ShortcutListener } from "@/components/layout/shortcut-listener";
 
 const inter = Inter({ subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -41,12 +42,24 @@ export default function RootLayout({
             `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className={`${inter.className} ${jetbrainsMono.variable} bg-background`}>
         <ThemeProvider>
           <AuthProvider>
             <AuthGuard>
               <SyncManager />
+              <ShortcutListener />
               <Sidebar />
               <MainContent>{children}</MainContent>
               <MobileTabBar />

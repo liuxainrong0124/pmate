@@ -55,6 +55,7 @@ export function ActivityForm({
   const [content, setContent] = useState("");
 
   const [templates, setTemplates] = useState<StoredActivityTemplate[]>([]);
+  const initialRef = useRef({ name: "", startDate: "", endDate: "", targetAudience: "", content: "" });
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +96,26 @@ export function ActivityForm({
       setShowTemplateDropdown(false);
     }
   }, [open, activity, prefillDate]);
+
+  // Sync initial ref after state settles
+  useEffect(() => {
+    if (open) {
+      initialRef.current = { name, startDate, endDate, targetAudience, content };
+    }
+    // Only on open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const isDirty = () => {
+    const init = initialRef.current;
+    return name !== init.name || startDate !== init.startDate || endDate !== init.endDate ||
+      targetAudience !== init.targetAudience || content !== init.content;
+  };
+
+  const handleClose = () => {
+    if (isDirty() && !window.confirm("有未保存的内容，确定离开吗？")) return;
+    onClose();
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -176,7 +197,7 @@ export function ActivityForm({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="sm:max-w-lg" showCloseButton={true}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "编辑活动" : "新建活动"}</DialogTitle>
@@ -313,7 +334,7 @@ export function ActivityForm({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               取消
             </Button>
             <Button type="submit">{isEdit ? "保存修改" : "创建活动"}</Button>

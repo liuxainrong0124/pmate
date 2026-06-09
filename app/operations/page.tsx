@@ -2,15 +2,21 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Megaphone, Send, BarChart3 } from "lucide-react";
+import { Megaphone, Send, BarChart3, Calendar, FlaskConical, FileText } from "lucide-react";
 import { ContentGenerator } from "@/components/operations/content-generator";
 import { PushStrategy } from "@/components/operations/push-strategy";
+import { ActivityManager } from "@/components/operations/activity-manager";
+import { ExperimentManager } from "@/components/operations/experiment-manager";
+import { WeeklyReport } from "@/components/operations/weekly-report";
 
-type Tab = "content" | "strategy";
+type Tab = "content" | "strategy" | "activity" | "experiment" | "report";
 
 const tabs: { key: Tab; label: string; icon: typeof Megaphone }[] = [
   { key: "content", label: "内容生成", icon: Send },
   { key: "strategy", label: "推送策略", icon: BarChart3 },
+  { key: "activity", label: "活动管理", icon: Calendar },
+  { key: "experiment", label: "A/B 实验", icon: FlaskConical },
+  { key: "report", label: "周报生成", icon: FileText },
 ];
 
 function OperationsContent() {
@@ -31,7 +37,7 @@ function OperationsContent() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">运营中心</h1>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">内容生成、A/B 文案、推送策略优化</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">内容生成 · 推送策略 · 活动管理 · A/B 实验 · 周报生成</p>
           </div>
         </div>
       </div>
@@ -58,6 +64,9 @@ function OperationsContent() {
         <ContentGenerator initialPersona={initialPersona} initialSegment={initialSegment} />
       )}
       {activeTab === "strategy" && <PushStrategy />}
+      {activeTab === "activity" && <ActivityManager />}
+      {activeTab === "experiment" && <ExperimentManager />}
+      {activeTab === "report" && <WeeklyReport />}
     </div>
   );
 }

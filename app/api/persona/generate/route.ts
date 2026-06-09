@@ -5,7 +5,7 @@ import { parsePersonaResponse } from "@/lib/ai/parsers/persona-parser";
 
 export async function POST(request: NextRequest) {
   try {
-    const { segmentName, segmentDesc, characteristics, apiKey } = await request.json();
+    const { segmentName, segmentDesc, characteristics, feedbacks, apiKey } = await request.json();
     if (!segmentName || typeof segmentName !== "string") {
       return NextResponse.json({ error: "segmentName is required" }, { status: 400 });
     }
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const res = await callLlm({ apiKey,
       messages: [
         { role: "system", content: PERSONA_SYSTEM_PROMPT },
-        { role: "user", content: buildPersonaUserPrompt(segmentName, segmentDesc || "", characteristics || []) },
+        { role: "user", content: buildPersonaUserPrompt(segmentName, segmentDesc || "", characteristics || [], feedbacks || []) },
       ],
       temperature: 0.7,
       responseFormat: "json_object",

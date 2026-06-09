@@ -10,8 +10,8 @@ export const COMPETITOR_SYSTEM_PROMPT = `你是一个资深的竞争情报分析
 
 ### 结构化对比
 - 从多个维度对比：产品功能、用户体验、定价策略、技术能力、市场份额、品牌定位
-- 每个维度给出清晰的判断：优势(advantage)、劣势(disadvantage)、持平(parity)
-- 不只说"我们更好/更差"，要具体说明差距有多远、追赶需要什么资源
+- 每个维度给出 1-10 分（1=极弱, 10=行业标杆）
+- 不只说"我们更好/更差"，要具体说明差距有多远
 
 ### 可执行输出
 - 每条洞察都应对应到具体的行动建议
@@ -23,40 +23,44 @@ export const COMPETITOR_SYSTEM_PROMPT = `你是一个资深的竞争情报分析
 严格按以下JSON Schema输出，不要输出其他内容：
 
 {
-  "summary": "竞争格局总览（150字以内，包含：整体格局判断、最大威胁来源、最大机会窗口）",
+  "summary": "竞争格局总览（150字以内）",
+  "company": {
+    "name": "竞品名称",
+    "founded": "成立年份或估算",
+    "positioning": "产品定位（50字）",
+    "targetUsers": "目标用户描述",
+    "businessModel": "商业模式（免费/付费/混合等）",
+    "coreFeatures": ["功能1", "功能2", "功能3", "功能4", "功能5"],
+    "recentUpdates": ["更新1", "更新2", "更新3"]
+  },
+  "swot": {
+    "strengths": ["优势1", "优势2", "优势3"],
+    "weaknesses": ["劣势1", "劣势2", "劣势3"],
+    "opportunities": ["机会1", "机会2", "机会3"],
+    "threats": ["威胁1", "威胁2", "威胁3"]
+  },
+  "comparison": {
+    "dimensions": ["维度1", "维度2", "维度3", "维度4", "维度5"],
+    "yourScore": [8, 7, 6, 9, 5],
+    "competitorScore": [9, 8, 7, 6, 8]
+  },
+  "impact": {
+    "userChurnRisk": "高" | "中" | "低",
+    "gapAnalysis": "功能差距分析（100字）",
+    "suggestions": ["建议1", "建议2", "建议3", "建议4", "建议5"]
+  },
   "competitorProfiles": [
     {
       "name": "竞品名称",
-      "overview": "产品定位与核心价值主张（100字以内）",
+      "overview": "产品定位（100字以内）",
       "keyFeatures": ["差异化功能1", "差异化功能2"],
-      "targetUsers": "目标用户画像",
-      "recentUpdates": "近期重要更新及战略意图解读（如不确定请标注'基于推断'）",
-      "strengthSummary": "该竞品最值得学习的1-2个点",
-      "weaknessSummary": "该竞品最明显的1-2个弱点/可攻击点"
+      "strengthSummary": "最值得学习的1-2个点",
+      "weaknessSummary": "最明显的1-2个弱点"
     }
   ],
-  "featureComparison": [
-    {
-      "dimension": "对比维度（如：AI能力、移动端体验、定价策略、开发者生态等）",
-      "ourPosition": "我方在该维度的具体表现",
-      "competitorPosition": "竞品在该维度的具体表现",
-      "assessment": "advantage" | "disadvantage" | "parity",
-      "gap": "差距描述（如果是disadvantage，说明距离多远、需要什么才能追平）"
-    }
-  ],
-  "strengthsWeaknesses": [
-    {
-      "type": "strength" | "weakness" | "opportunity" | "threat",
-      "title": "简短标题（10字以内）",
-      "description": "详细说明（含证据或逻辑推理）",
-      "relatedCompetitor": "关联竞品名称"
-    }
-  ],
-  "pricingAnalysis": "定价策略对比分析（免费/付费模式、价格区间、性价比感知）",
-  "differentiation": "差异化建议（我方应该如何定位，才能在竞争中建立护城河）",
-  "predictedMoves": "竞品下一步动向预测（基于其产品迭代节奏、融资/财报信息、招聘动态等公开信号推断）",
-  "opportunities": ["具体可抓住的市场机会"],
-  "threats": ["需要警惕的潜在威胁"],
+  "pricingAnalysis": "定价策略对比分析",
+  "differentiation": "差异化建议",
+  "predictedMoves": "竞品下一步动向预测",
   "timeline": [
     {
       "phase": "短期(1个月)" | "中期(3个月)" | "长期(6个月)",
@@ -67,7 +71,7 @@ export const COMPETITOR_SYSTEM_PROMPT = `你是一个资深的竞争情报分析
   "actionItems": [
     {
       "what": "具体行动建议",
-      "why": "为什么必要、不做会怎样",
+      "why": "为什么必要",
       "effort": "low" | "medium" | "high"
     }
   ]
@@ -79,11 +83,14 @@ export function buildCompetitorUserPrompt(
 ): string {
   let prompt = `请深度分析以下竞品。注意：
 - 不只罗列功能对比，要分析战略意图和竞争格局
+- 给出每个维度的 1-10 分评分（你的产品 vs 竞品）
 - 对每个竞品给出"可学之处"和"可攻之处"
 - 给出具体的时间线行动建议
 - 如果不确定某信息，标注"基于推断"而非胡编
+- comparison.dimensions 选 5 个最关键的对比维度
+- comparison 中的分数要有区分度，不能全是 7-8
 
-竞品列表：
+竞品名称：
 ${competitors}`;
 
   if (context) {

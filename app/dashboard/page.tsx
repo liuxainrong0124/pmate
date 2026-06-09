@@ -8,6 +8,9 @@ import { AmbientBackground } from "@/components/effects/ambient-background";
 import { MetricData, emptyMetrics, emptyAlerts } from "@/lib/mock/dashboard-data";
 import { getUploadedMetrics, getSettings, getTodos, toggleTodo as toggleTodoStore, deleteTodo, addTodo, StoredTodo } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { EncouragementBanner, trackTodoComplete } from "@/components/shared/encouragement";
+import { DailyDigest } from "@/components/dashboard/daily-digest";
+import { CompetitorPulse } from "@/components/dashboard/competitor-pulse";
 import { ArrowRight, AlertTriangle, Info, Clock, FileText, BarChart3, Users, Megaphone, Search, Check, Upload, Plus, Trash2, X } from "lucide-react";
 
 const quickActions = [
@@ -74,7 +77,10 @@ export default function DashboardPage() {
 
   const toggleTodo = (id: string) => {
     toggleTodoStore(id);
-    setTodoState(getTodos());
+    const updated = getTodos();
+    setTodoState(updated);
+    const todoItem = updated.find(t => t.id === id);
+    if (todoItem?.done) trackTodoComplete();
   };
 
   const handleDeleteTodo = (id: string) => {
@@ -135,6 +141,21 @@ export default function DashboardPage() {
             <span className="text-2xl">👋</span>
           </div>
           <p className="text-sm text-gray-400 dark:text-gray-500 font-medium">{dateStr}</p>
+        </div>
+
+        {/* Encouragement */}
+        <div className="mb-6 animate-fade-in">
+          <EncouragementBanner />
+        </div>
+
+        {/* AI Daily Digest */}
+        <div className="mb-6 animate-fade-in">
+          <DailyDigest />
+        </div>
+
+        {/* Competitor Pulse */}
+        <div className="mb-6 animate-fade-in">
+          <CompetitorPulse />
         </div>
 
         {!hasUploadedData && (

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronDown, ChevronUp, Wifi, Shield, Database, GitBranch, Smartphone, Zap, AlertTriangle } from "lucide-react";
-import { getUserApiKey } from "@/lib/store/local-store";
+import { Loader2, Sparkles, ChevronDown, ChevronUp, Wifi, Shield, Database, GitBranch, Smartphone, Zap, AlertTriangle, Copy, Check } from "lucide-react";
+import { getUserApiKey, getSettings } from "@/lib/store/local-store";
+import { showToast } from "@/components/shared/toast";
 
 interface AnomalyScenario {
   category: string;
@@ -14,6 +15,7 @@ interface AnomalyScenario {
   trigger: string;
   severity: "critical" | "high" | "medium" | "low";
   suggestion: string;
+  toastMessage?: string;
 }
 
 const categoryMeta: Record<string, { icon: typeof Wifi; color: string; label: string }> = {
@@ -42,6 +44,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `在 Chrome DevTools 中模拟 Slow 3G 网络，打开${featureName}页面，等待数据加载。`,
       severity: "high",
       suggestion: "添加请求超时重试机制（最多 3 次），超时后展示友好提示并支持手动重试。同时展示骨架屏占位。",
+      toastMessage: "网络开小差了，请检查网络后重试",
     },
     {
       category: "数据为空",
@@ -50,6 +53,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `使用全新账号登录，进入${featureName}页面。`,
       severity: "medium",
       suggestion: "设计空状态引导页，用插画+文案说明功能价值，提供「开始使用」CTA 按钮引导用户完成首次操作。",
+      toastMessage: "这里还没有内容，快来创建第一条吧",
     },
     {
       category: "权限异常",
@@ -58,6 +62,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `手动清除 Cookie/Storage 中的 auth_token，然后在${featureName}中执行提交操作。`,
       severity: "critical",
       suggestion: "请求拦截器中捕获 401，自动跳转登录页并保存当前操作上下文，登录后恢复。使用 beforeunload 事件提醒用户。",
+      toastMessage: "登录已过期，请重新登录",
     },
     {
       category: "并发冲突",
@@ -66,6 +71,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `在两个浏览器 Tab 中打开${featureName}编辑页，分别修改同一字段后先后保存。`,
       severity: "high",
       suggestion: "引入乐观锁（版本号机制），保存时比较版本号，冲突时提示用户并展示差异对比，由用户选择保留哪个版本。",
+      toastMessage: "数据已被他人修改，请刷新后重试",
     },
     {
       category: "边界条件",
@@ -74,6 +80,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `准备一段 20000+ 字符的文本（含 emoji、特殊 Unicode），粘贴到${featureName}的输入框中。`,
       severity: "medium",
       suggestion: "前端限制输入长度（maxLength），后端同样校验。对特殊字符做转义处理，使用 CSS word-break: break-word 防止溢出。",
+      toastMessage: "输入内容过长，请控制在10000字以内",
     },
     {
       category: "版本兼容",
@@ -82,6 +89,7 @@ function generateMockScenarios(featureName: string): AnomalyScenario[] {
       trigger: `在 Xcode Simulator 中启动 iOS 13 设备，用 Safari 打开${featureName}页面。`,
       severity: "low",
       suggestion: "使用 @supports 做 CSS 降级，JS 使用 try-catch + polyfill 方案。在构建时通过 browserslist 控制兼容范围。",
+      toastMessage: "部分功能在当前浏览器版本中不可用，建议升级",
     },
   ];
 }
@@ -92,15 +100,31 @@ export function AnomalyGenerator() {
   const [scenarios, setScenarios] = useState<AnomalyScenario[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  const getBusinessContext = (): string => {
+    try {
+      const settings = getSettings();
+      const parts: string[] = [];
+      if (settings.userName) parts.push(`产品目标用户画像：${settings.userName}类型的用户群体`);
+      return parts.join("；") || "通用移动应用产品";
+    } catch { return "通用移动应用产品"; }
+  };
 
   const handleGenerate = async () => {
     if (!featureName.trim() || isGenerating) return;
     setIsGenerating(true);
     try {
+      const businessContext = getBusinessContext();
       const res = await fetch("/api/anomaly/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: getUserApiKey() || '', featureName: featureName.trim(), description: description.trim() }),
+        body: JSON.stringify({
+          apiKey: getUserApiKey() || '',
+          featureName: featureName.trim(),
+          description: description.trim(),
+          businessContext,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -117,6 +141,20 @@ export function AnomalyGenerator() {
     }
     setIsGenerating(false);
     setExpandedIndex(null);
+  };
+
+  const handleCopyAll = async () => {
+    const text = scenarios.map((s, i) =>
+      `## ${i + 1}. ${s.title} [${s.category}] [${s.severity === "critical" ? "严重" : s.severity === "high" ? "高" : s.severity === "medium" ? "中" : "低"}]\n` +
+      `**场景描述：** ${s.description}\n` +
+      `**复现步骤：** ${s.trigger}\n` +
+      `**处理建议：** ${s.suggestion}\n` +
+      (s.toastMessage ? `**Toast提示：** ${s.toastMessage}\n` : "")
+    ).join("\n---\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopiedAll(true);
+    showToast("已复制全部场景", "success");
+    setTimeout(() => setCopiedAll(false), 2000);
   };
 
   return (
@@ -166,6 +204,15 @@ export function AnomalyGenerator() {
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-sm text-gray-900">生成结果</h3>
             <span className="text-xs text-gray-400">{scenarios.length} 个场景</span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyAll}
+              className="rounded-lg border-gray-200 text-xs"
+            >
+              {copiedAll ? <><Check className="mr-1 w-3 h-3" />已复制</> : <><Copy className="mr-1 w-3 h-3" />一键复制全部</>}
+            </Button>
           </div>
           {scenarios.map((scenario, i) => {
             const meta = categoryMeta[scenario.category] || categoryMeta["边界条件"];
@@ -212,6 +259,12 @@ export function AnomalyGenerator() {
                       <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">处理建议</span>
                       <p className="text-sm text-gray-700 mt-1">{scenario.suggestion}</p>
                     </div>
+                    {scenario.toastMessage && (
+                      <div className="rounded-lg bg-amber-50 border border-amber-100 p-2.5 flex items-start gap-2">
+                        <span className="text-[10px] font-medium text-amber-600 shrink-0 mt-0.5">Toast</span>
+                        <code className="text-xs text-amber-800">{scenario.toastMessage}</code>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

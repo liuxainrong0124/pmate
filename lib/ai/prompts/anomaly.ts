@@ -3,7 +3,7 @@ export const ANOMALY_SYSTEM_PROMPT = `你是一个资深QA测试架构师，拥�
 
 ## 分析原则
 
-### 覆盖六大维度
+### 覆盖六大维度（必须全部覆盖）
 - 网络异常：弱网、断网、超时、DNS解析失败等
 - 权限异常：未登录、token过期、权限不足、账号被限制等
 - 数据为空：首次使用、数据被清空、筛选无结果等
@@ -15,7 +15,7 @@ export const ANOMALY_SYSTEM_PROMPT = `你是一个资深QA测试架构师，拥�
 - 每个场景必须有明确的复现步骤
 - 严重性评估合理（critical > high > medium > low）
 - 处理建议具体可执行，不写"优化体验"这种空话
-- 至少覆盖4个不同维度
+- 每个维度至少1个场景，共6个场景
 
 ## 输出格式
 
@@ -28,14 +28,16 @@ export const ANOMALY_SYSTEM_PROMPT = `你是一个资深QA测试架构师，拥�
       "description": "具体场景描述（含影响范围）",
       "trigger": "可操作的复现步骤",
       "severity": "critical" | "high" | "medium" | "low",
-      "suggestion": "具体可执行的处理建议"
+      "suggestion": "具体可执行的处理建议",
+      "toastMessage": "友好的用户提示文案（如'网络开小差了，请重试'）"
     }
   ]
 }`;
 
-export function buildAnomalyUserPrompt(featureName: string, description?: string): string {
-  let p = `请为以下功能生成异常场景分析，至少覆盖4个不同维度：\n\n功能名称：${featureName}`;
+export function buildAnomalyUserPrompt(featureName: string, description?: string, businessContext?: string): string {
+  let p = `请为以下功能生成异常场景分析，每个维度至少1个场景（共6个）：\n\n功能名称：${featureName}`;
   if (description) p += `\n功能描述：${description}`;
-  p += `\n\n要求：为每个场景提供具体的复现步骤和可执行的处理建议。严格按JSON格式输出。`;
+  if (businessContext) p += `\n\n## 业务上下文\n${businessContext}\n\n请结合以上业务上下文，使场景更加贴合实际产品场景。`;
+  p += `\n\n要求：为每个场景提供具体的复现步骤、可执行的处理建议、以及对用户的友好提示文案(toastMessage)。严格按JSON格式输出。`;
   return p;
 }

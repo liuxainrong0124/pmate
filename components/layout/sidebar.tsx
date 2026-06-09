@@ -1,33 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/supabase/auth-context";
 import { getRoleLabel } from "@/lib/permissions";
+import { GlobalSearch } from "@/components/layout/global-search";
+import { getUnreadAlertCount } from "@/lib/alert";
+import { getCompetitorUpdateCount } from "@/lib/store/local-store";
 import {
   LayoutDashboard, FileText, BarChart3, Users, Megaphone, TrendingUp,
   ChevronLeft, ChevronRight, Settings, Sparkles, BookOpen, GitBranch,
-  CalendarDays, FlaskConical, LogOut,
+  CalendarDays, FlaskConical, LogOut, Clock, Target,
 } from "lucide-react";
 
-const mainItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: any;
+  color: string;
+  lightColor: string;
+  lightBg: string;
+  darkBg: string;
+  alertBadge?: boolean;
+  competitorBadge?: boolean;
+}
+
+const mainItems: NavItem[] = [
   { href: "/dashboard", label: "仪表盘", icon: LayoutDashboard, color: "bg-blue-500", lightColor: "text-blue-600", lightBg: "bg-blue-50", darkBg: "dark:bg-blue-500/10" },
   { href: "/requirements", label: "需求中心", icon: FileText, color: "bg-violet-500", lightColor: "text-violet-600", lightBg: "bg-violet-50", darkBg: "dark:bg-violet-500/10" },
-  { href: "/data", label: "数据洞察", icon: BarChart3, color: "bg-emerald-500", lightColor: "text-emerald-600", lightBg: "bg-emerald-50", darkBg: "dark:bg-emerald-500/10" },
+  { href: "/data", label: "数据洞察", icon: BarChart3, color: "bg-emerald-500", lightColor: "text-emerald-600", lightBg: "bg-emerald-50", darkBg: "dark:bg-emerald-500/10", alertBadge: true },
   { href: "/users", label: "用户中心", icon: Users, color: "bg-orange-500", lightColor: "text-orange-600", lightBg: "bg-orange-50", darkBg: "dark:bg-orange-500/10" },
   { href: "/operations", label: "运营中心", icon: Megaphone, color: "bg-rose-500", lightColor: "text-rose-600", lightBg: "bg-rose-50", darkBg: "dark:bg-rose-500/10" },
   { href: "/experiments", label: "A/B 实验", icon: FlaskConical, color: "bg-cyan-500", lightColor: "text-cyan-600", lightBg: "bg-cyan-50", darkBg: "dark:bg-cyan-500/10" },
   { href: "/activities", label: "活动管理", icon: CalendarDays, color: "bg-orange-500", lightColor: "text-orange-600", lightBg: "bg-orange-50", darkBg: "dark:bg-orange-500/10" },
-  { href: "/competitor", label: "竞品追踪", icon: TrendingUp, color: "bg-red-500", lightColor: "text-red-600", lightBg: "bg-red-50", darkBg: "dark:bg-red-500/10" },
+  { href: "/competitor", label: "竞品追踪", icon: TrendingUp, color: "bg-red-500", lightColor: "text-red-600", lightBg: "bg-red-50", darkBg: "dark:bg-red-500/10", competitorBadge: true },
   { href: "/knowledge", label: "知识库", icon: BookOpen, color: "bg-amber-500", lightColor: "text-amber-600", lightBg: "bg-amber-50", darkBg: "dark:bg-amber-500/10" },
   { href: "/versions", label: "版本管理", icon: GitBranch, color: "bg-teal-500", lightColor: "text-teal-600", lightBg: "bg-teal-50", darkBg: "dark:bg-teal-500/10" },
+  { href: "/okr", label: "OKR 管理", icon: Target, color: "bg-amber-500", lightColor: "text-amber-600", lightBg: "bg-amber-50", darkBg: "dark:bg-amber-500/10" },
+  { href: "/logs", label: "操作日志", icon: Clock, color: "bg-gray-500", lightColor: "text-gray-600", lightBg: "bg-gray-50", darkBg: "dark:bg-gray-500/10" },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [competitorUpdates, setCompetitorUpdates] = useState(0);
   const pathname = usePathname();
   const { user, role, signOut } = useAuth();
+
+  useEffect(() => {
+    setUnreadAlerts(getUnreadAlertCount());
+    setCompetitorUpdates(getCompetitorUpdateCount());
+    const interval = setInterval(() => {
+      setUnreadAlerts(getUnreadAlertCount());
+      setCompetitorUpdates(getCompetitorUpdateCount());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Hide sidebar on landing page
   if (pathname === "/") return null;
@@ -55,6 +85,13 @@ export function Sidebar() {
         </Link>
       </div>
 
+      {/* Global Search */}
+      {!collapsed && (
+        <div className="px-3 pb-2">
+          <GlobalSearch />
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
         {mainItems.map((item) => {
@@ -80,7 +117,23 @@ export function Sidebar() {
                 }`}
                 strokeWidth={active ? 2 : 1.5}
               />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span className="flex-1">{item.label}</span>}
+              {item.alertBadge && unreadAlerts > 0 && (
+                <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                  {unreadAlerts > 99 ? "99+" : unreadAlerts}
+                </span>
+              )}
+              {item.competitorBadge && competitorUpdates > 0 && (
+                <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-500 text-white text-[10px] font-bold px-1">
+                  {competitorUpdates > 99 ? "99+" : competitorUpdates}
+                </span>
+              )}
+              {item.alertBadge && unreadAlerts > 0 && collapsed && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+              )}
+              {item.competitorBadge && competitorUpdates > 0 && collapsed && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500" />
+              )}
               {active && collapsed && (
                 <span className={`absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${item.color}`} />
               )}

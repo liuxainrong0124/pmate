@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FlaskConical } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ export function ExperimentForm({ open, experiment, onClose, onSaved }: Experimen
   const [plannedDays, setPlannedDays] = useState(7);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Track initial values for dirty check
+  const initialRef = useRef({ name: "", goalMetric: "点击率", description: "", groupA: "", groupB: "", trafficSplit: 50, plannedDays: 7 });
+
   useEffect(() => {
     if (open) {
       if (experiment) {
@@ -41,6 +44,7 @@ export function ExperimentForm({ open, experiment, onClose, onSaved }: Experimen
         setGroupB(experiment.groupB);
         setTrafficSplit(experiment.trafficSplit);
         setPlannedDays(experiment.plannedDays);
+        initialRef.current = { name: experiment.name, goalMetric: experiment.goalMetric, description: experiment.description, groupA: experiment.groupA, groupB: experiment.groupB, trafficSplit: experiment.trafficSplit, plannedDays: experiment.plannedDays };
       } else {
         setName("");
         setGoalMetric("点击率");
@@ -49,10 +53,22 @@ export function ExperimentForm({ open, experiment, onClose, onSaved }: Experimen
         setGroupB("实验组");
         setTrafficSplit(50);
         setPlannedDays(7);
+        initialRef.current = { name: "", goalMetric: "点击率", description: "", groupA: "对照组", groupB: "实验组", trafficSplit: 50, plannedDays: 7 };
       }
       setErrors({});
     }
   }, [open, experiment]);
+
+  const isDirty = () => {
+    const init = initialRef.current;
+    return name !== init.name || goalMetric !== init.goalMetric || description !== init.description ||
+      groupA !== init.groupA || groupB !== init.groupB || trafficSplit !== init.trafficSplit || plannedDays !== init.plannedDays;
+  };
+
+  const handleClose = () => {
+    if (isDirty() && !window.confirm("有未保存的内容，确定离开吗？")) return;
+    onClose();
+  };
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -92,7 +108,7 @@ export function ExperimentForm({ open, experiment, onClose, onSaved }: Experimen
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2.5 mb-1">
@@ -217,7 +233,7 @@ export function ExperimentForm({ open, experiment, onClose, onSaved }: Experimen
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={onClose} className="rounded-xl">
+          <Button variant="outline" onClick={handleClose} className="rounded-xl">
             取消
           </Button>
           <Button onClick={handleSave} className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, X, Send, MessageSquare, Trash2, Lock } from "lucide-react";
+import { Search, Plus, X, Send, MessageSquare, Trash2, Lock, Clock, AlertTriangle as AlertIcon, Sparkles, Loader2, CheckCircle, ShieldAlert } from "lucide-react";
 import { canEdit } from "@/lib/permissions";
 import {
   PoolRequirement,
@@ -9,12 +9,16 @@ import {
   addPoolRequirement,
   updatePoolRequirement,
   deletePoolRequirement,
+  approvePoolRequirement,
+  rejectPoolRequirement,
   getVersions,
   getComments,
   addComment,
   addLog,
+  getRequirementVersions,
   StoredVersion,
   StoredComment,
+  StoredRequirementVersion,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
 
@@ -80,6 +84,9 @@ export function RequirementsPool() {
   const [commentText, setCommentText] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
 
+  // Version history
+  const [reqVersions, setReqVersions] = useState<StoredRequirementVersion[]>([]);
+
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -87,11 +94,93 @@ export function RequirementsPool() {
     module: "",
     priority: "p2" as PoolRequirement["priority"],
     assignee: "",
+    backupAssignee: "",
+    dueDate: "",
   });
+
+  // Filter: show only overdue
+  const [showOverdue, setShowOverdue] = useState(false);
+
+  // ── Overdue detection ──
+  const today = new Date().toISOString().slice(0, 10);
+  const isOverdue = (req: PoolRequirement) => {
+    if (!req.dueDate) return false;
+    if (req.status === "done" || req.status === "backlog") return false;
+    return req.dueDate < today;
+  };
+  const overdueCount = requirements.filter(isOverdue).length;
 
   // Confirmations
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [statusChangeConfirm, setStatusChangeConfirm] = useState<{ id: string; newStatus: string } | null>(null);
+
+  // AI Review
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewResult, setReviewResult] = useState<{
+    score: number; summary: string; strengths: string[];
+    issues: { severity: string; category: string; description: string; suggestion: string }[];
+    missingScenarios: string[]; acceptanceCriteriaQuality: string; readyForDev: boolean;
+  } | null>(null);
+
+  // Batch operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allIds = new Set(filtered.map((r) => r.id));
+    if (selectedIds.size === allIds.size) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(allIds);
+    }
+  };
+
+  const batchDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`确定删除选中的 ${selectedIds.size} 条需求吗？此操作不可撤销。`)) return;
+    let count = 0;
+    selectedIds.forEach((id) => {
+      deletePoolRequirement(id);
+      count++;
+    });
+    showToast(`已删除 ${count} 条需求`, "success");
+    addLog("批量删除", "需求", `批量删除 ${count} 条需求`);
+    setSelectedIds(new Set());
+    refresh();
+  };
+
+  const batchChangeStatus = (newStatus: string) => {
+    if (selectedIds.size === 0) return;
+    let count = 0;
+    selectedIds.forEach((id) => {
+      updatePoolRequirement(id, { status: newStatus as PoolRequirement["status"] });
+      count++;
+    });
+    showToast(`已更新 ${count} 条需求状态`, "success");
+    addLog("批量更新", "需求", `批量更新 ${count} 条需求状态为 ${statusMeta[newStatus]?.label || newStatus}`);
+    setSelectedIds(new Set());
+    refresh();
+  };
+
+  const batchChangePriority = (newPriority: string) => {
+    if (selectedIds.size === 0) return;
+    let count = 0;
+    selectedIds.forEach((id) => {
+      updatePoolRequirement(id, { priority: newPriority as PoolRequirement["priority"] });
+      count++;
+    });
+    showToast(`已更新 ${count} 条需求优先级`, "success");
+    addLog("批量更新", "需求", `批量更新 ${count} 条需求优先级为 ${newPriority}`);
+    setSelectedIds(new Set());
+    refresh();
+  };
 
   // ── Init & refresh ──
 
@@ -106,7 +195,10 @@ export function RequirementsPool() {
   }, []);
 
   useEffect(() => {
-    if (selectedReq) setComments(getComments(selectedReq.id));
+    if (selectedReq) {
+      setComments(getComments(selectedReq.id));
+      setReqVersions(getRequirementVersions(selectedReq.id));
+    }
   }, [selectedReq?.id]);
 
   // Keyboard: Escape to close drawer
@@ -128,6 +220,7 @@ export function RequirementsPool() {
         const ext = r as ExtendedPoolRequirement;
         if (ext.versionId !== versionFilter) return false;
       }
+      if (showOverdue && !isOverdue(r)) return false;
       return true;
     })
     .sort((a, b) => {
@@ -167,8 +260,9 @@ export function RequirementsPool() {
     updatePoolRequirement(selectedReq.id, drawerForm as any);
     showToast("保存成功", "success");
     addLog("update", `需求 ${selectedReq.id}`, `更新了需求 "${drawerForm.title}"`);
-    const updated = { ...selectedReq, ...drawerForm };
-    setSelectedReq(updated);
+    setDrawerOpen(false);
+    setSelectedReq(null);
+    setDrawerForm(null);
     setDrawerDirty(false);
     refresh();
   };
@@ -215,11 +309,11 @@ export function RequirementsPool() {
 
   const handleCreate = () => {
     if (!createForm.title.trim()) return;
-    addPoolRequirement({ ...createForm, status: "planning", impact: 5, effort: 5 });
+    addPoolRequirement({ ...createForm, status: "planning", impact: 5, effort: 5, backupAssignee: createForm.backupAssignee, approvalStatus: "pending" });
     showToast("需求已创建", "success");
     addLog("create", "需求池", `创建了新需求 "${createForm.title}"`);
     setCreateOpen(false);
-    setCreateForm({ title: "", module: "", priority: "p2", assignee: "" });
+    setCreateForm({ title: "", module: "", priority: "p2", assignee: "", backupAssignee: "", dueDate: "" });
     refresh();
   };
 
@@ -236,6 +330,35 @@ export function RequirementsPool() {
     addLog("comment", `需求 ${selectedReq.id}`, `添加了评论`);
     setComments(getComments(selectedReq.id));
     setCommentText("");
+  };
+
+  const handleAIReview = async () => {
+    if (!selectedReq) return;
+    setReviewing(true);
+    setReviewResult(null);
+    try {
+      const res = await fetch("/api/requirement-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requirement: {
+            title: selectedReq.title,
+            description: (selectedReq as ExtendedPoolRequirement).description || "",
+            acceptanceCriteria: (selectedReq as ExtendedPoolRequirement).acceptanceCriteria || "",
+            module: selectedReq.module,
+            priority: selectedReq.priority,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error("评审请求失败");
+      const data = await res.json();
+      setReviewResult(data.review);
+      addLog("ai_review", `需求 ${selectedReq.id}`, `AI 评审完成，评分: ${data.review.score}`);
+    } catch {
+      showToast("AI 评审失败，请检查 API Key", "error");
+    } finally {
+      setReviewing(false);
+    }
   };
 
   // ── Shared input style ──
@@ -313,6 +436,72 @@ export function RequirementsPool() {
         )}
       </div>
 
+      {/* ═══════════════════════════════════════════ Overdue Alert Banner ═══════════════════════════════════════════ */}
+      {overdueCount > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm animate-fade-in">
+          <AlertIcon className="w-4 h-4 text-red-500 shrink-0" />
+          <span className="text-red-700 font-medium">
+            {overdueCount} 条需求已逾期
+          </span>
+          <span className="text-xs text-red-500">
+            请及时处理或更新截止日期
+          </span>
+          <button
+            onClick={() => { setShowOverdue(true); setStatusFilter("all"); }}
+            className="ml-auto text-xs font-medium text-red-600 hover:text-red-800 underline underline-offset-2"
+          >
+            查看逾期需求
+          </button>
+          {showOverdue && (
+            <button
+              onClick={() => setShowOverdue(false)}
+              className="text-xs text-red-400 hover:text-red-600"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ Batch actions ═══════════════════════════════════════════ */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm animate-fade-in">
+          <span className="text-xs">已选 {selectedIds.size} 项</span>
+          <div className="h-4 w-px bg-white/20 ml-1" />
+          <select
+            onChange={(e) => { if (e.target.value) batchChangeStatus(e.target.value); e.target.value = ""; }}
+            className="text-xs bg-white/10 border border-white/20 rounded-lg px-2 py-1 outline-none cursor-pointer"
+          >
+            <option value="" className="text-gray-900">修改状态...</option>
+            {Object.entries(statusMeta).map(([k, v]) => (
+              <option key={k} value={k} className="text-gray-900">{v.label}</option>
+            ))}
+          </select>
+          <select
+            onChange={(e) => { if (e.target.value) batchChangePriority(e.target.value); e.target.value = ""; }}
+            className="text-xs bg-white/10 border border-white/20 rounded-lg px-2 py-1 outline-none cursor-pointer"
+          >
+            <option value="" className="text-gray-900">修改优先级...</option>
+            <option value="p0" className="text-gray-900">P0</option>
+            <option value="p1" className="text-gray-900">P1</option>
+            <option value="p2" className="text-gray-900">P2</option>
+            <option value="p3" className="text-gray-900">P3</option>
+          </select>
+          <button
+            onClick={batchDelete}
+            className="text-xs bg-red-500/20 hover:bg-red-500/40 text-red-200 px-2 py-1 rounded-lg transition-colors ml-auto"
+          >
+            删除选中
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-white/60 hover:text-white ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ═══════════════════════════════════════════ List ═══════════════════════════════════════════ */}
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -320,12 +509,22 @@ export function RequirementsPool() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3 w-[40px]">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    className="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3 w-[100px]">ID</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">需求标题</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">模块</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">状态</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">优先级</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">负责人</th>
+                <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">截止日期</th>
                 <th className="text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase px-4 py-3">创建日期</th>
               </tr>
             </thead>
@@ -336,6 +535,14 @@ export function RequirementsPool() {
                   onClick={() => openDrawer(req)}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                 >
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(req.id)}
+                      onChange={() => toggleSelect(req.id)}
+                      className="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{req.id}</span>
                   </td>
@@ -346,9 +553,14 @@ export function RequirementsPool() {
                     <span className="text-xs text-gray-500 dark:text-gray-400">{req.module || "—"}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex text-[10px] font-medium px-2 py-0.5 rounded-full ${statusMeta[req.status]?.color ?? ""}`}>
-                      {statusMeta[req.status]?.label ?? req.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-flex text-[10px] font-medium px-2 py-0.5 rounded-full ${statusMeta[req.status]?.color ?? ""}`}>
+                        {statusMeta[req.status]?.label ?? req.status}
+                      </span>
+                      {(req as PoolRequirement & { approvalStatus?: string }).approvalStatus === "pending" && (
+                        <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700">待审批</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex text-[10px] font-medium px-2 py-0.5 rounded-full ${priorityMeta[req.priority]}`}>
@@ -361,6 +573,16 @@ export function RequirementsPool() {
                         {req.assignee?.[0] || "?"}
                       </div>
                       <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{req.assignee || "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      {isOverdue(req) && (
+                        <Clock className="w-3 h-3 text-red-500" />
+                      )}
+                      <span className={`text-xs ${isOverdue(req) ? "text-red-600 font-medium" : "text-gray-400 dark:text-gray-500"}`}>
+                        {req.dueDate || "—"}
+                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -487,6 +709,28 @@ export function RequirementsPool() {
                 />
               </div>
 
+              {/* Backup Assignee */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">备份负责人</label>
+                <input
+                  value={(drawerForm as ExtendedPoolRequirement & { backupAssignee?: string }).backupAssignee ?? ""}
+                  onChange={(e) => { setDrawerForm({ ...drawerForm, backupAssignee: e.target.value } as ExtendedPoolRequirement); setDrawerDirty(true); }}
+                  placeholder="备份负责人（可选）"
+                  className={inputCls}
+                />
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">截止日期</label>
+                <input
+                  type="date"
+                  value={drawerForm.dueDate ?? ""}
+                  onChange={(e) => { setDrawerForm({ ...drawerForm, dueDate: e.target.value }); setDrawerDirty(true); }}
+                  className={inputCls}
+                />
+              </div>
+
               {/* Version */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">所属版本</label>
@@ -529,6 +773,147 @@ export function RequirementsPool() {
                   <p className="text-xs text-gray-400 flex items-center gap-1.5 py-2">
                     <Lock className="w-3.5 h-3.5" />只读模式 — 无法编辑或删除
                   </p>
+                )}
+              </div>
+
+              {/* Approval Section */}
+              {canEdit() && (selectedReq as PoolRequirement & { approvalStatus?: string }).approvalStatus === "pending" && (
+                <div className="rounded-xl border border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/10 p-4">
+                  <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400 mb-3">该需求等待审批</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        approvePoolRequirement(selectedReq.id, "当前用户");
+                        showToast("已审批通过", "success");
+                        addLog("approve", `需求 ${selectedReq.id}`, "审批通过");
+                        closeDrawer();
+                        refresh();
+                      }}
+                      className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-2 transition-colors"
+                    >
+                      审批通过
+                    </button>
+                    <button
+                      onClick={() => {
+                        rejectPoolRequirement(selectedReq.id, "当前用户");
+                        showToast("已拒绝", "success");
+                        addLog("reject", `需求 ${selectedReq.id}`, "审批拒绝");
+                        closeDrawer();
+                        refresh();
+                      }}
+                      className="flex-1 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      拒绝
+                    </button>
+                  </div>
+                </div>
+              )}
+              {(selectedReq as PoolRequirement & { approvalStatus?: string; approvedBy?: string; approvedAt?: string }).approvalStatus === "approved" && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-3">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                    已审批通过 · {(selectedReq as PoolRequirement & { approvedBy?: string }).approvedBy} · {new Date((selectedReq as PoolRequirement & { approvedAt?: string }).approvedAt || "").toLocaleDateString("zh-CN")}
+                  </p>
+                </div>
+              )}
+
+              {/* AI Review Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">AI 需求评审</h4>
+                  </div>
+                  <button
+                    onClick={handleAIReview}
+                    disabled={reviewing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 text-white text-xs font-medium transition-colors"
+                  >
+                    {reviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {reviewing ? "评审中..." : reviewResult ? "重新评审" : "AI 评审"}
+                  </button>
+                </div>
+
+                {reviewing && (
+                  <div className="flex items-center gap-2 py-4 justify-center text-xs text-gray-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    AI 正在分析需求的完整性、可测试性、边界条件...
+                  </div>
+                )}
+
+                {reviewResult && !reviewing && (
+                  <div className="space-y-3 animate-fade-in">
+                    {/* Score */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                      <div className={`text-2xl font-bold ${reviewResult.score >= 70 ? "text-emerald-600" : reviewResult.score >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                        {reviewResult.score}
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">评审分数</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{reviewResult.summary}</p>
+                      </div>
+                      {reviewResult.readyForDev ? (
+                        <CheckCircle className="w-5 h-5 text-emerald-500 ml-auto" />
+                      ) : (
+                        <ShieldAlert className="w-5 h-5 text-amber-500 ml-auto" />
+                      )}
+                    </div>
+
+                    {/* Strengths */}
+                    {reviewResult.strengths.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">做得好的地方</p>
+                        {reviewResult.strengths.map((s, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />{s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Issues */}
+                    {reviewResult.issues.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">发现的问题</p>
+                        <div className="space-y-2">
+                          {reviewResult.issues.map((issue, i) => (
+                            <div key={i} className={`rounded-lg p-2.5 ${
+                              issue.severity === "critical" ? "bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20" :
+                              issue.severity === "major" ? "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20" :
+                              "bg-gray-50 dark:bg-gray-800/50"
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                                  issue.severity === "critical" ? "bg-red-100 text-red-700" :
+                                  issue.severity === "major" ? "bg-amber-100 text-amber-700" :
+                                  "bg-gray-200 text-gray-600"
+                                }`}>{issue.severity === "critical" ? "严重" : issue.severity === "major" ? "重要" : "建议"}</span>
+                                <span className="text-[10px] text-gray-400">{issue.category}</span>
+                              </div>
+                              <p className="text-xs text-gray-700 dark:text-gray-300">{issue.description}</p>
+                              <p className="text-[11px] text-violet-600 dark:text-violet-400 mt-1">建议: {issue.suggestion}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Missing scenarios */}
+                    {reviewResult.missingScenarios.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">缺少的边界/异常场景</p>
+                        {reviewResult.missingScenarios.map((s, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                            <AlertIcon className="w-3 h-3 mt-0.5 shrink-0" />{s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-400">
+                      验收标准质量: {reviewResult.acceptanceCriteriaQuality === "good" ? "✅ 充分" : reviewResult.acceptanceCriteriaQuality === "adequate" ? "⚡ 基本合格" : "❌ 不足"} ·
+                      可进入开发: {reviewResult.readyForDev ? "✅ 是" : "❌ 否"}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -595,6 +980,45 @@ export function RequirementsPool() {
                 </div>
               </div>
 
+              {/* ── Version History ── */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    变更历史 ({reqVersions.length})
+                  </h4>
+                </div>
+                {reqVersions.length > 0 ? (
+                  <div className="space-y-2 max-h-52 overflow-y-auto">
+                    {reqVersions.map((v) => (
+                      <div key={v.id} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-xs">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] text-gray-400">
+                            {new Date(v.changedAt).toLocaleString("zh-CN", {
+                              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                            })}
+                          </span>
+                          <span className="text-[10px] text-gray-500">·</span>
+                          <span className="text-[10px] text-gray-500">{v.changedBy}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+                          <span>状态: <span className="font-medium">{statusMeta[v.snapshot.status]?.label ?? v.snapshot.status}</span></span>
+                          <span>优先级: <span className="font-medium">{v.snapshot.priority.toUpperCase()}</span></span>
+                          <span>负责人: <span className="font-medium">{v.snapshot.assignee || "—"}</span></span>
+                          <span>模块: <span className="font-medium">{v.snapshot.module || "—"}</span></span>
+                          {v.snapshot.dueDate && <span>截止: <span className="font-medium">{v.snapshot.dueDate}</span></span>}
+                          {v.snapshot.description && (
+                            <span className="col-span-2 line-clamp-1 text-gray-400">描述: {v.snapshot.description}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">首次编辑后将自动记录变更历史</p>
+                )}
+              </div>
+
               {/* Bottom spacer for comfortable scroll */}
               <div className="h-4" />
             </div>
@@ -656,6 +1080,24 @@ export function RequirementsPool() {
                   placeholder="如：Alex"
                   value={createForm.assignee}
                   onChange={(e) => setCreateForm({ ...createForm, assignee: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">备份负责人</label>
+                <input
+                  placeholder="如：小明（可选）"
+                  value={createForm.backupAssignee}
+                  onChange={(e) => setCreateForm({ ...createForm, backupAssignee: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">截止日期</label>
+                <input
+                  type="date"
+                  value={createForm.dueDate}
+                  onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
                   className={inputCls}
                 />
               </div>

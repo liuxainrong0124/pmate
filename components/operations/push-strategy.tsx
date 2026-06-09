@@ -8,11 +8,16 @@ import { getUserApiKey,  getItem, setItem } from "@/lib/store/local-store";
 interface StrategyItem {
   segment: string;
   bestTime: string;
+  timeBasis?: string;
   bestChannel: string;
+  channelBasis?: string;
   frequency: string;
+  frequencyBasis?: string;
   expectedOpenRate: string;
   notes: string;
   color: string;
+  confidence?: string;
+  dataRange?: string;
 }
 
 interface HistoryItem {
@@ -197,11 +202,42 @@ export function PushStrategy() {
                     <div>
                       <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">最佳渠道</span>
                       <p className="text-sm text-gray-700 mt-1">{strategy.bestChannel}</p>
+                      {strategy.channelBasis && (
+                        <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">依据：{strategy.channelBasis}</p>
+                      )}
                     </div>
                     <div>
                       <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">推送频率</span>
                       <p className="text-sm text-gray-700 mt-1">{strategy.frequency}</p>
+                      {strategy.frequencyBasis && (
+                        <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">依据：{strategy.frequencyBasis}</p>
+                      )}
                     </div>
+                  </div>
+                  {/* Time basis */}
+                  {strategy.timeBasis && (
+                    <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 flex items-start gap-2">
+                      <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-[10px] font-medium text-blue-600 uppercase tracking-wide">推荐时间依据</span>
+                        <p className="text-xs text-blue-800 mt-0.5">{strategy.timeBasis}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Confidence + Data range */}
+                  <div className="flex items-center gap-3">
+                    {strategy.confidence && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        strategy.confidence === "高" ? "bg-emerald-100 text-emerald-700" :
+                        strategy.confidence === "中" ? "bg-amber-100 text-amber-700" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        置信度：{strategy.confidence}
+                      </span>
+                    )}
+                    {strategy.dataRange && (
+                      <span className="text-[10px] text-gray-400">数据范围：{strategy.dataRange}</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">运营建议</span>

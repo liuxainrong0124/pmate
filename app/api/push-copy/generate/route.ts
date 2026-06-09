@@ -5,15 +5,21 @@ import { parsePushCopyResponse } from "@/lib/ai/parsers/push-copy-parser";
 
 export async function POST(request: NextRequest) {
   try {
-    const { targetUsers, purpose, apiKey } = await request.json();
+    const { targetUsers, purpose, apiKey, length, style } = await request.json();
     if (!purpose || typeof purpose !== "string" || !purpose.trim()) {
       return NextResponse.json({ error: "purpose is required" }, { status: 400 });
     }
 
-    const res = await callLlm({ apiKey,
+    const res = await callLlm({
+      apiKey,
       messages: [
         { role: "system", content: PUSH_COPY_SYSTEM_PROMPT },
-        { role: "user", content: buildPushCopyUserPrompt(targetUsers || "", purpose.trim()) },
+        { role: "user", content: buildPushCopyUserPrompt(
+          targetUsers || "",
+          purpose.trim(),
+          length || "medium",
+          style || "all",
+        ) },
       ],
       temperature: 0.8,
       responseFormat: "json_object",

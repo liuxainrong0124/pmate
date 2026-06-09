@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { CompetitorReport as CompetitorReportType } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, ListChecks, Shield, TrendingUp, Target, AlertTriangle, Users, Zap, Clock, DollarSign, Crosshair, ArrowRight } from "lucide-react";
+import { RadarChart } from "@/components/competitor/radar-chart";
+import { Lightbulb, ListChecks, Shield, TrendingUp, Target, AlertTriangle, Users, Zap, Clock, DollarSign, Crosshair, ArrowRight, Building2, Calendar, Gauge, BarChart3 } from "lucide-react";
 
 interface CompetitorReportProps { report: CompetitorReportType; }
 
@@ -53,6 +54,210 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
         </div>
         <p className="text-gray-700 leading-relaxed">{report.summary}</p>
       </div>
+
+      {/* Company Overview (AI 全自动分析) */}
+      {report.company && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="w-4 h-4 text-indigo-500" />
+            <h3 className="font-semibold text-gray-900">竞品画像</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <div>
+                <span className="text-xs text-gray-400">公司名称</span>
+                <p className="font-semibold text-gray-900">{report.company.name}</p>
+              </div>
+              <div className="flex gap-4">
+                <div>
+                  <span className="text-xs text-gray-400">成立时间</span>
+                  <p className="text-sm text-gray-700 flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3 text-gray-400" />
+                    {report.company.founded}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">产品定位</span>
+                <p className="text-sm text-gray-700">{report.company.positioning}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">目标用户</span>
+                <p className="text-sm text-gray-700">{report.company.targetUsers}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">商业模式</span>
+                <p className="text-sm text-gray-700">{report.company.businessModel}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {report.company.coreFeatures.length > 0 && (
+                <div>
+                  <span className="text-xs text-gray-400">核心功能</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {report.company.coreFeatures.map((f, j) => (
+                      <Badge key={j} variant="secondary" className="text-xs bg-indigo-50 text-indigo-700">
+                        {f}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {report.company.recentUpdates.length > 0 && (
+                <div>
+                  <span className="text-xs text-gray-400">近期更新</span>
+                  <ul className="mt-1 space-y-1">
+                    {report.company.recentUpdates.map((u, j) => (
+                      <li key={j} className="text-xs text-gray-600 flex items-start gap-1.5">
+                        <span className="text-indigo-400 mt-0.5 shrink-0">+</span>
+                        {u}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SWOT Four-Quadrant (AI 全自动分析) */}
+      {report.swot && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Gauge className="w-4 h-4 text-violet-500" />
+            <h3 className="font-semibold text-gray-900">SWOT 分析</h3>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* Strengths - Green */}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <h4 className="text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" /> 优势 Strengths
+              </h4>
+              <ul className="space-y-1.5">
+                {report.swot.strengths.map((s, i) => (
+                  <li key={i} className="text-xs text-emerald-800 flex items-start gap-1.5">
+                    <span className="text-emerald-400 mt-0.5 shrink-0">+</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Weaknesses - Red */}
+            <div className="rounded-xl border border-red-200 bg-red-50/50 p-4">
+              <h4 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> 劣势 Weaknesses
+              </h4>
+              <ul className="space-y-1.5">
+                {report.swot.weaknesses.map((s, i) => (
+                  <li key={i} className="text-xs text-red-800 flex items-start gap-1.5">
+                    <span className="text-red-400 mt-0.5 shrink-0">-</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Opportunities - Blue */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+              <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5" /> 机会 Opportunities
+              </h4>
+              <ul className="space-y-1.5">
+                {report.swot.opportunities.map((s, i) => (
+                  <li key={i} className="text-xs text-blue-800 flex items-start gap-1.5">
+                    <span className="text-blue-400 mt-0.5 shrink-0">+</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Threats - Orange */}
+            <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+              <h4 className="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> 威胁 Threats
+              </h4>
+              <ul className="space-y-1.5">
+                {report.swot.threats.map((s, i) => (
+                  <li key={i} className="text-xs text-orange-800 flex items-start gap-1.5">
+                    <span className="text-orange-400 mt-0.5 shrink-0">-</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comparison Radar Chart (AI 全自动分析) */}
+      {report.comparison && report.comparison.dimensions.length >= 3 && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-blue-500" />
+            <h3 className="font-semibold text-gray-900">功能对比雷达图</h3>
+          </div>
+          <RadarChart
+            dimensions={report.comparison.dimensions}
+            yourScore={report.comparison.yourScore}
+            competitorScore={report.comparison.competitorScore}
+          />
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {report.comparison.dimensions.map((dim, i) => (
+              <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                <span className="text-gray-600">{dim}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-blue-600 font-medium">{report.comparison!.yourScore[i]}</span>
+                  <span className="text-gray-300">vs</span>
+                  <span className="text-red-500 font-medium">{report.comparison!.competitorScore[i]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Impact Assessment (AI 全自动分析) */}
+      {report.impact && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-4 h-4 text-rose-500" />
+            <h3 className="font-semibold text-gray-900">影响评估</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500">用户流失风险</span>
+              <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                report.impact.userChurnRisk === "高"
+                  ? "bg-red-100 text-red-700"
+                  : report.impact.userChurnRisk === "中"
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-emerald-100 text-emerald-700"
+              }`}>
+                {report.impact.userChurnRisk}
+              </span>
+            </div>
+            {report.impact.gapAnalysis && (
+              <div className="bg-gray-50 rounded-xl p-4">
+                <span className="text-xs text-gray-400 block mb-1">差距分析</span>
+                <p className="text-sm text-gray-700 leading-relaxed">{report.impact.gapAnalysis}</p>
+              </div>
+            )}
+            {report.impact.suggestions.length > 0 && (
+              <div>
+                <span className="text-xs text-gray-400 block mb-2">建议动作</span>
+                <div className="space-y-2">
+                  {report.impact.suggestions.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-gray-700 bg-rose-50/50 rounded-lg px-3 py-2 border border-rose-100">
+                      <span className="text-rose-500 font-medium shrink-0">{i + 1}.</span>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Competitor Profiles */}
       {report.competitorProfiles.length > 0 && (

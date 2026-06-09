@@ -2,8 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, X, Check, ArrowRight, FileJson, FileText } from "lucide-react";
+import { Upload, FileSpreadsheet, X, Check, ArrowRight, FileJson, FileText, AlertTriangle, Download, Loader2 } from "lucide-react";
 import { getUploadedMetrics, setUploadedMetrics, StoredMetric } from "@/lib/store/local-store";
+import { showToast } from "@/components/shared/toast";
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 interface ParsedData {
   fileName: string;
@@ -81,24 +84,75 @@ export function DataUpload() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+
+  const downloadSampleCSV = () => {
+    const sample = `date,dau,retention,ltv\n2026-05-01,10234,0.38,25.5\n2026-05-02,11200,0.37,26.1\n2026-05-03,10890,0.39,24.8\n2026-05-04,11500,0.36,27.2\n2026-05-05,12000,0.40,28.0`;
+    const blob = new Blob(["﻿" + sample], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sample_data.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     setError(null);
+    setErrorDetail(null);
+    setProgress(0);
+
+    // Size check
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      setError(`文件过大 (${sizeMB} MB)，最大支持 50 MB`);
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
       let headers: string[] = [];
       let rows: string[][] = [];
       let format = ext;
 
+      setProgress(20);
+
       if (ext === "csv" || file.type === "text/csv") {
         const text = await file.text();
+        setProgress(50);
         const parsed = parseCSV(text);
         headers = parsed.headers;
         rows = parsed.rows;
         format = "csv";
+        // Validate rows
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].length !== headers.length) {
+            throw new Error(`第 ${i + 2} 行解析错误：列数(${rows[i].length})与表头(${headers.length})不匹配`);
+          }
+        }
+        // Check date format in first column
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        for (let i = 0; i < Math.min(rows.length, 5); i++) {
+          const dateVal = rows[i][0]?.trim();
+          if (dateVal && !dateRegex.test(dateVal) && !isNaN(Date.parse(dateVal))) {
+            throw new Error(`第 ${i + 2} 行，日期列格式异常：应为 YYYY-MM-DD，实际为 "${dateVal}"`);
+          }
+        }
+        // Check numeric columns
+        for (let i = 0; i < rows.length; i++) {
+          for (let j = 1; j < rows[i].length; j++) {
+            const val = rows[i][j]?.trim();
+            if (val && isNaN(Number(val))) {
+              throw new Error(`第 ${i + 2} 行，第 ${j + 1} 列("${headers[j] || "列" + (j+1)}")包含非数字字符："${val}"`);
+            }
+          }
+        }
       } else if (ext === "json") {
         const text = await file.text();
+        setProgress(50);
         const json = JSON.parse(text);
         const arr = Array.isArray(json) ? json : [json];
         if (arr.length === 0) throw new Error("JSON 文件为空");
@@ -106,11 +160,12 @@ export function DataUpload() {
         rows = arr.map((item: Record<string, unknown>) => headers.map(h => String(item[h] ?? "")));
         format = "json";
       } else if (ext === "xlsx" || ext === "xls") {
-        // Parse via API for Excel files
+        setProgress(30);
         const formData = new FormData();
         formData.append("files", file);
         const res = await fetch("/api/parse-file", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Excel 解析失败");
+        setProgress(60);
+        if (!res.ok) throw new Error("Excel 解析失败，请检查文件是否损坏或受密码保护");
         const data = await res.json();
         if (data.files?.[0]?.text) {
           const parsed = parseCSV(data.files[0].text);
@@ -118,22 +173,30 @@ export function DataUpload() {
           rows = parsed.rows;
           format = ext;
         } else {
-          throw new Error("Excel 文件解析后内容为空");
+          throw new Error("Excel 文件解析后内容为空，请确认文件包含数据");
         }
       } else {
-        throw new Error(`不支持的文件格式: .${ext}。支持 CSV、Excel (.xlsx/.xls)、JSON`);
+        throw new Error(`不支持的文件格式: .${ext}。支持 CSV、Excel (.xlsx/.xls)、JSON。请 <a href="#" onclick="event.preventDefault()">下载示例</a> 查看正确格式。`);
       }
 
+      setProgress(80);
+
       if (headers.length === 0 || rows.length === 0) {
-        throw new Error("文件中没有找到有效数据");
+        throw new Error("文件中没有找到有效数据。请确保文件至少包含表头和一行数据。");
       }
 
       const detectedMetric = detectMetric(headers);
       setParsedData({ fileName: file.name, headers, rows: rows.slice(0, 100), totalRows: rows.length, format });
       setSelectedMetric(detectedMetric);
       setSaved(false);
+      setProgress(100);
+      setTimeout(() => setProgress(0), 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "文件解析失败");
+      const msg = err instanceof Error ? err.message : "文件解析失败";
+      setError(msg);
+      if (err instanceof SyntaxError) {
+        setErrorDetail("JSON 格式错误，请检查文件语法");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -250,7 +313,54 @@ export function DataUpload() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50/50 p-4 text-sm text-red-700">{error}</div>
+        <div className="rounded-xl border border-red-100 bg-red-50/50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-700 font-medium">解析错误</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
+              {errorDetail && <p className="text-xs text-red-500 mt-1">{errorDetail}</p>}
+            </div>
+          </div>
+          <button
+            onClick={downloadSampleCSV}
+            className="mt-3 inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 font-medium"
+          >
+            <Download className="w-3.5 h-3.5" />
+            下载示例文件查看正确格式
+          </button>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {(isProcessing || progress > 0) && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-500">
+              {isProcessing ? "处理中..." : "处理完成"}
+            </span>
+            <span className="text-xs font-medium text-gray-700">{progress}%</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${progress === 100 ? "bg-emerald-500" : "bg-gray-600"}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Sample download hint */}
+      {!parsedData && !error && (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={downloadSampleCSV}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            下载示例 CSV
+          </button>
+        </div>
       )}
 
       {/* Detected Metric */}

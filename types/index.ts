@@ -99,6 +99,31 @@ export interface TimelinePhase {
 
 export interface CompetitorReport {
   summary: string;
+  company?: {
+    name: string;
+    founded: string;
+    positioning: string;
+    targetUsers: string;
+    businessModel: string;
+    coreFeatures: string[];
+    recentUpdates: string[];
+  };
+  swot?: {
+    strengths: string[];
+    weaknesses: string[];
+    opportunities: string[];
+    threats: string[];
+  };
+  comparison?: {
+    dimensions: string[];
+    yourScore: number[];
+    competitorScore: number[];
+  };
+  impact?: {
+    userChurnRisk: string;
+    gapAnalysis: string;
+    suggestions: string[];
+  };
   competitorProfiles: CompetitorProfile[];
   featureComparison: ComparisonItem[];
   strengthsWeaknesses: SWOTItem[];

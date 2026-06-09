@@ -5,7 +5,7 @@ import { parseAnomalyResponse } from "@/lib/ai/parsers/anomaly-parser";
 
 export async function POST(request: NextRequest) {
   try {
-    const { featureName, description, apiKey } = await request.json();
+    const { featureName, description, businessContext, apiKey } = await request.json();
     if (!featureName || typeof featureName !== "string" || !featureName.trim()) {
       return NextResponse.json({ error: "featureName is required" }, { status: 400 });
     }
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const res = await callLlm({ apiKey,
       messages: [
         { role: "system", content: ANOMALY_SYSTEM_PROMPT },
-        { role: "user", content: buildAnomalyUserPrompt(featureName.trim(), description?.trim()) },
+        { role: "user", content: buildAnomalyUserPrompt(featureName.trim(), description?.trim(), businessContext) },
       ],
       temperature: 0.4,
       responseFormat: "json_object",
