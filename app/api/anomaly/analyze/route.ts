@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { toStringArray } from "@/lib/ai/parsers/utils";
 
 const SYSTEM_PROMPT = `你是一位资深数据分析师，专门做指标异动归因分析。
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
   } catch (e: unknown) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Analysis failed" },
-      { status: 500 }
+      { status: apiErrorStatus(e) }
     );
   }
 }

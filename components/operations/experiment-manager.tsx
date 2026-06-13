@@ -218,10 +218,20 @@ export function ExperimentManager() {
       if (res.ok) {
         const data = await res.json();
         if (data.analysis) { setAnalysisResult(data.analysis); setAnalyzingId(null); return; }
+        setAnalysisError("AI 返回了空结果，请重试");
+        setAnalyzingId(null);
+        return;
       }
-      throw new Error("AI 分析失败");
+      const errData = await res.json().catch(() => ({ error: "请求失败" }));
+      if (res.status === 401) {
+        setAnalysisError("API Key 无效，请在设置中重新配置 DeepSeek API Key");
+      } else {
+        setAnalysisError(errData.error || "AI 分析失败");
+      }
+      setAnalyzingId(null);
+      return;
     } catch {
-      setAnalysisError("分析失败，请检查 API Key 配置");
+      setAnalysisError("网络错误，请检查网络连接后重试");
     }
     setAnalyzingId(null);
   };
@@ -340,7 +350,7 @@ export function ExperimentManager() {
       )}
 
       {/* AI Analysis Modal */}
-      {(analyzingId || analysisResult) && (
+      {(analyzingId || analysisResult || analysisError) && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60" onClick={() => { setAnalysisResult(null); setAnalysisError(null); }} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700">

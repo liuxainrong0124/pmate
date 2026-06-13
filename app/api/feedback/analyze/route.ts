@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { FEEDBACK_SYSTEM_PROMPT, buildFeedbackUserPrompt } from "@/lib/ai/prompts/feedback";
 import { parseFeedbackResponse } from "@/lib/ai/parsers/feedback-parser";
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Analysis failed";
     return NextResponse.json(
       { error: message },
-      { status: 500 }
+      { status: apiErrorStatus(error) }
     );
   }
 }

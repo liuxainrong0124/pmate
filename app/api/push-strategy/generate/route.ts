@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { PUSH_STRATEGY_SYSTEM_PROMPT, buildPushStrategyUserPrompt } from "@/lib/ai/prompts/push-strategy";
 
 export async function POST(request: NextRequest) {
@@ -22,6 +23,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ strategies: parsed.strategies || [], history: parsed.history || [], usage: res.usage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Push strategy generation failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: apiErrorStatus(e) });
   }
 }

@@ -101,6 +101,9 @@ export function DailyDigest() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "请求失败" }));
+        if (res.status === 401) {
+          throw new Error("API Key 无效，请在设置中重新获取 DeepSeek API Key（platform.deepseek.com）");
+        }
         throw new Error(err.error || `请求失败 (${res.status})`);
       }
 

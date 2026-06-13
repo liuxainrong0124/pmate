@@ -29,9 +29,8 @@ export function FeedbackAggregation() {
 
   useEffect(() => {
     const stored = getFeedbackHistory();
-    // Merge stored with defaults, stored first
-    const storedIds = new Set(stored.map(f => f.id));
-    const merged = [...stored, ...DEFAULT_FEEDBACK.filter(f => !storedIds.has(f.id))];
+    // Only show defaults when no real data exists
+    const merged = stored.length > 0 ? stored : DEFAULT_FEEDBACK;
     setFeedback(merged);
     setLoaded(true);
   }, []);

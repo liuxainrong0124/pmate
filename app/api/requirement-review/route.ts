@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { buildReviewSystemPrompt, buildReviewUserPrompt } from "@/lib/ai/prompts/requirement-review";
 
 export async function POST(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.error("Requirement review error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "评审失败" },
-      { status: 500 }
+      { status: apiErrorStatus(err) }
     );
   }
 }

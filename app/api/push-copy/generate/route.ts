@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { PUSH_COPY_SYSTEM_PROMPT, buildPushCopyUserPrompt } from "@/lib/ai/prompts/push-copy";
 import { parsePushCopyResponse } from "@/lib/ai/parsers/push-copy-parser";
 
@@ -29,6 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ variants, usage: res.usage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Push copy generation failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: apiErrorStatus(e) });
   }
 }

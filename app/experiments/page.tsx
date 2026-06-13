@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FlaskConical, Plus, Pencil, Trash2, Play, Square, FileText } from "lucide-react";
+import { FlaskConical, Plus, Pencil, Trash2, Play, Square, FileText, Sparkles, Loader2, X, BarChart3, TrendingDown, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +11,7 @@ import {
   updateExperiment,
   addPoolRequirement,
   addLog,
+  getUserApiKey,
   StoredExperiment,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
@@ -18,6 +19,7 @@ import { canEdit } from "@/lib/permissions";
 import { ExperimentForm } from "@/components/experiments/experiment-form";
 import { ExperimentDetail } from "@/components/experiments/experiment-detail";
 import { ExperimentResult } from "@/components/experiments/experiment-result";
+import { twoProportionZTest } from "@/lib/stats";
 
 type StatusFilter = "all" | "draft" | "running" | "ended";
 
@@ -26,6 +28,23 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   running: { label: "运行中", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" },
   ended: { label: "已结束", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" },
 };
+
+interface AnalysisResult {
+  statisticalSummary: {
+    controlRate: string; experimentRate: string; absoluteLift: string; relativeLift: string;
+    zScore: number; pValue: string; confidenceInterval: string; significant: boolean;
+    power: string; sampleSizeAdequate: string;
+  };
+  recommendation: {
+    verdict: string; rationale: string;
+    ifLaunch: string; ifExtend: string; ifRedesign: string;
+    risks: string[]; nextSteps: string[];
+  };
+  businessImpact: { practicalSignificance: string; northStarAlignment: string; expectedROI: string; userExperienceImpact: string; };
+  noveltyCheck: { durationRisk: string; recommendation: string; trendStabilityNote: string; };
+  segmentationRisks: { simpsonWarning: string; recommendedSegments: string[]; potentialReversals: string; };
+  longTermProjection: { oneMonthEffect: string; threeMonthEffect: string; keyAssumptions: string[]; decayRisk: string; };
+}
 
 export default function ExperimentsPage() {
   const router = useRouter();
@@ -36,6 +55,64 @@ export default function ExperimentsPage() {
   const [selectedExperiment, setSelectedExperiment] = useState<StoredExperiment | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [resultExperiment, setResultExperiment] = useState<StoredExperiment | null>(null);
+
+  // AI Analysis state
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  const handleAnalyze = async (exp: StoredExperiment) => {
+    setAnalyzingId(exp.id);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    const stats = twoProportionZTest(
+      Math.round(exp.valueA * exp.sampleA),
+      exp.sampleA,
+      Math.round(exp.valueB * exp.sampleB),
+      exp.sampleB
+    );
+
+    try {
+      const res = await fetch("/api/experiment/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: getUserApiKey(),
+          experiment: {
+            name: exp.name,
+            goalMetric: exp.goalMetric,
+            groupA: { name: exp.groupA, sample: exp.sampleA, value: exp.valueA },
+            groupB: { name: exp.groupB, sample: exp.sampleB, value: exp.valueB },
+            plannedDays: exp.plannedDays,
+          },
+          statsResult: {
+            controlRate: stats.controlRate,
+            experimentRate: stats.experimentRate,
+            absoluteLift: stats.absoluteLift,
+            relativeLift: stats.relativeLift,
+            zScore: stats.zScore,
+            pValue: stats.pValue,
+            significant: stats.significant,
+            confidenceLevel: stats.confidenceLevel,
+            ciLow: stats.ciLow,
+            ciHigh: stats.ciHigh,
+            sampleSizeAdequate: stats.sampleSizeAdequate,
+            minSampleNeeded: stats.minSampleNeeded,
+            power: stats.power,
+          },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.analysis) { setAnalysisResult(data.analysis); setAnalyzingId(null); return; }
+      }
+      throw new Error("AI 分析失败");
+    } catch {
+      setAnalysisError("分析失败，请检查 API Key 配置");
+    }
+    setAnalyzingId(null);
+  };
 
   const handleExperimentToRequirement = (exp: StoredExperiment) => {
     addPoolRequirement({
@@ -318,6 +395,14 @@ export default function ExperimentsPage() {
                       <FileText className="w-3 h-3" />
                       查看报告
                     </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnalyze(exp); }}
+                      disabled={analyzingId === exp.id}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors disabled:opacity-50"
+                    >
+                      {analyzingId === exp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      AI 分析
+                    </button>
                     {exp.lift > 10 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleExperimentToRequirement(exp); }}
@@ -358,6 +443,103 @@ export default function ExperimentsPage() {
           onClose={() => { setShowDetail(false); loadExperiments(); }}
           onUpdated={handleExperimentUpdated}
         />
+      )}
+
+      {/* AI Analysis Modal */}
+      {(analyzingId || analysisResult || analysisError) && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60" onClick={() => { setAnalysisResult(null); setAnalysisError(null); }} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-violet-500" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">AI 实验结果分析</h3>
+              </div>
+              <button onClick={() => { setAnalysisResult(null); setAnalysisError(null); }} className="p-1 rounded-lg text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            {analyzingId && (
+              <div className="flex items-center gap-3 py-8 justify-center">
+                <Loader2 className="w-5 h-5 text-violet-500 animate-spin" />
+                <span className="text-sm text-gray-500">AI 正在分析实验数据...</span>
+              </div>
+            )}
+
+            {analysisError && !analysisResult && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                <p className="text-sm text-red-700 font-medium mb-1">分析失败</p>
+                <p className="text-xs text-red-600">{analysisError}</p>
+              </div>
+            )}
+
+            {analysisResult && (
+              <div className="space-y-4 animate-fade-in text-sm">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4">
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2">统计指标（前端实时计算）</h5>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className={`text-3xl font-bold ${analysisResult.statisticalSummary.significant ? "text-emerald-600" : "text-amber-600"}`}>
+                      {analysisResult.statisticalSummary.relativeLift}
+                    </div>
+                    <div className="flex-1 space-y-0.5">
+                      <p className="text-xs text-gray-500">对照 {analysisResult.statisticalSummary.controlRate} → 实验 {analysisResult.statisticalSummary.experimentRate}</p>
+                      <p className="text-xs text-gray-500">{analysisResult.statisticalSummary.pValue}</p>
+                      <p className="text-xs text-gray-500">Z = {analysisResult.statisticalSummary.zScore.toFixed(2)} · {analysisResult.statisticalSummary.power}</p>
+                    </div>
+                    {analysisResult.statisticalSummary.significant ? (
+                      <CheckCircle className="w-6 h-6 text-emerald-500 ml-auto" />
+                    ) : (
+                      <TrendingDown className="w-6 h-6 text-amber-500 ml-auto" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">置信区间: {analysisResult.statisticalSummary.confidenceInterval}</p>
+                  <p className="text-xs text-gray-400">{analysisResult.statisticalSummary.sampleSizeAdequate}</p>
+                </div>
+
+                <div className={`rounded-lg p-3 ${analysisResult.recommendation.verdict.includes("全量") ? "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20"}`}>
+                  <p className="text-sm font-semibold">{analysisResult.recommendation.verdict}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{analysisResult.recommendation.rationale}</p>
+                </div>
+
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">业务影响分析</summary>
+                  <div className="mt-2 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <p><span className="font-medium">实际意义：</span>{analysisResult.businessImpact.practicalSignificance}</p>
+                    <p><span className="font-medium">北极星对齐：</span>{analysisResult.businessImpact.northStarAlignment}</p>
+                    <p><span className="font-medium">预估ROI：</span>{analysisResult.businessImpact.expectedROI}</p>
+                  </div>
+                </details>
+
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">新奇效应评估</summary>
+                  <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p>风险等级：{analysisResult.noveltyCheck.durationRisk} · {analysisResult.noveltyCheck.recommendation}</p>
+                  </div>
+                </details>
+
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">分层分析建议</summary>
+                  <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p>{analysisResult.segmentationRisks.simpsonWarning}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {analysisResult.segmentationRisks.recommendedSegments.map((s, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 text-[10px]">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">执行计划</h5>
+                  {analysisResult.recommendation.nextSteps.map((s, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                      <span className="text-violet-500 font-medium mt-0.5">{i + 1}.</span> {s}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Result Dialog */}

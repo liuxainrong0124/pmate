@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { PERSONA_SYSTEM_PROMPT, buildPersonaUserPrompt } from "@/lib/ai/prompts/persona";
 import { parsePersonaResponse } from "@/lib/ai/parsers/persona-parser";
 
@@ -23,6 +24,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ personas, usage: res.usage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Persona generation failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: apiErrorStatus(e) });
   }
 }

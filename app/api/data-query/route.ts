@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiErrorStatus } from "@/lib/utils";
 import { callLlm } from "@/lib/ai/client";
 import { buildDataQuerySystemPrompt, buildDataQueryUserPrompt } from "@/lib/ai/prompts/data-query";
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.error("Data query error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "查询失败" },
-      { status: 500 }
+      { status: apiErrorStatus(err) }
     );
   }
 }

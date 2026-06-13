@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
@@ -36,6 +36,7 @@ export function EntryScreen() {
   const petalsRef = useRef<Petal[]>([]);
   const firefliesRef = useRef<Firefly[]>([]);
   const lastMouseRef = useRef(0);
+  const [canvasDebug, setCanvasDebug] = useState<string | null>(null);
   const treeDataRef = useRef<{ segments: Branch[]; blossoms: Blossom[]; dots: BlossomDot[]; built: boolean }>({
     segments: [], blossoms: [], dots: [], built: false,
   });
@@ -51,12 +52,13 @@ export function EntryScreen() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d")!;
     if (!ctx) return;
 
     // Offscreen canvas for static scene caching
     const offscreen = document.createElement("canvas");
     const offCtx = offscreen.getContext("2d")!;
+    if (!offCtx) return;
     let lastIsDark: boolean | null = null;
 
     let W = 0, H = 0;
@@ -72,6 +74,7 @@ export function EntryScreen() {
       const r = canvas!.getBoundingClientRect();
       W = canvas!.width = r.width;
       H = canvas!.height = r.height;
+      setCanvasDebug(`Canvas: ${W}x${H}, ready=${treeDataRef.current.built}`);
       offscreen.width = W;
       offscreen.height = H;
       // Tree positioned with room for full canopy
@@ -589,21 +592,21 @@ export function EntryScreen() {
         f.x = f.baseX + Math.sin(t * f.speed + f.phase) * 35;
         f.y = f.baseY + Math.cos(t * f.speed * 1.3 + f.phase) * 30;
         f.alpha = 0.1 + Math.sin(t * 1.5 + f.phase) * 0.1 + Math.sin(t * 2.3 + f.phase * 1.7) * 0.07;
-        const glow = ctx!.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 7);
+        const glow = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 7);
         const color = isDark
           ? `rgba(255,220,150,${f.alpha})`
           : `rgba(255,200,100,${f.alpha * 0.5})`;
         glow.addColorStop(0, color);
         glow.addColorStop(0.3, `rgba(255,200,100,${f.alpha * 0.25})`);
         glow.addColorStop(1, "rgba(255,200,100,0)");
-        ctx!.fillStyle = glow;
-        ctx!.beginPath();
-        ctx!.arc(f.x, f.y, f.r * 7, 0, Math.PI * 2);
-        ctx!.fill();
-        ctx!.fillStyle = isDark ? `rgba(255,240,200,${f.alpha * 1.5})` : `rgba(255,220,150,${f.alpha})`;
-        ctx!.beginPath();
-        ctx!.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx!.fill();
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r * 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = isDark ? `rgba(255,240,200,${f.alpha * 1.5})` : `rgba(255,220,150,${f.alpha})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
       });
     }
 
@@ -620,35 +623,46 @@ export function EntryScreen() {
         const fadeOut = 1 - Math.max(0, (p.life - p.maxLife * 0.5) / (p.maxLife * 0.5));
         const alpha = fadeIn * fadeOut;
         if (alpha <= 0.005) { petals.splice(i, 1); continue; }
-        ctx!.save(); ctx!.globalAlpha = alpha;
-        ctx!.translate(p.x, p.y); ctx!.rotate(p.rot);
+        ctx.save(); ctx.globalAlpha = alpha;
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
         const isDark = document.documentElement.classList.contains("dark");
-        ctx!.fillStyle = isDark
+        ctx.fillStyle = isDark
           ? `hsl(${260 + p.hue * 0.15},50%,${p.light + 5}%)`
           : `hsl(${p.hue},${p.sat}%,${p.light}%)`;
-        ctx!.beginPath();
-        ctx!.moveTo(0, -p.r);
-        ctx!.bezierCurveTo(p.r * 0.7, -p.r * 0.5, p.r * 0.7, p.r * 0.3, 0, p.r * 0.8);
-        ctx!.bezierCurveTo(-p.r * 0.7, p.r * 0.3, -p.r * 0.7, -p.r * 0.5, 0, -p.r);
-        ctx!.fill();
-        ctx!.restore();
+        ctx.beginPath();
+        ctx.moveTo(0, -p.r);
+        ctx.bezierCurveTo(p.r * 0.7, -p.r * 0.5, p.r * 0.7, p.r * 0.3, 0, p.r * 0.8);
+        ctx.bezierCurveTo(-p.r * 0.7, p.r * 0.3, -p.r * 0.7, -p.r * 0.5, 0, -p.r);
+        ctx.fill();
+        ctx.restore();
         if (p.life > p.maxLife || p.y > H + 30) { petals.splice(i, 1); }
       }
     }
 
     function render(ts: number) {
-      const isDark = document.documentElement.classList.contains("dark");
+      try {
+        const isDark = document.documentElement.classList.contains("dark");
 
-      // Rebuild static scene cache when theme changes
-      buildStaticScene(isDark);
+        // Rebuild static scene cache when theme changes
+        buildStaticScene(isDark);
 
-      // Blit static scene from offscreen canvas to main canvas
-      ctx!.drawImage(offscreen, 0, 0);
+        // Blit static scene from offscreen canvas to main canvas
+        ctx.drawImage(offscreen, 0, 0);
 
-      // Draw dynamic elements on top
-      drawStars(ctx!, isDark);
-      drawFireflies(ts);
-      updatePetals(ts);
+        // Draw dynamic elements on top
+        drawStars(ctx, isDark);
+        drawFireflies(ts);
+        updatePetals(ts);
+
+        // Debug: draw a small colored rectangle to confirm canvas works
+        ctx.fillStyle = "rgba(255,0,0,0.5)";
+        ctx.fillRect(W - 20, 10, 10, 10);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setCanvasDebug(`Render error: ${msg}`);
+        cancelAnimationFrame(animId);
+        return;
+      }
       animId = requestAnimationFrame(render);
     }
 
@@ -716,6 +730,11 @@ export function EntryScreen() {
   return (
     <div id="entry-screen" className="fixed inset-0 z-[200] cursor-default bg-[#E8D5C8] dark:bg-[#0D0D1A]">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      {canvasDebug && (
+        <div className="absolute bottom-4 left-4 z-[300] bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg font-mono">
+          {canvasDebug}
+        </div>
+      )}
       {/* Theme toggle */}
       <button
         onClick={toggleTheme}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { toStringArray } from "@/lib/ai/parsers/utils";
 
 const SYSTEM_PROMPT = `你是一个竞品情报分析师，专门追踪科技公司和互联网产品的动态。
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
   } catch (e: unknown) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Auto-monitor failed" },
-      { status: 500 }
+      { status: apiErrorStatus(e) }
     );
   }
 }

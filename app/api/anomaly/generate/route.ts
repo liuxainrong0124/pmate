@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { ANOMALY_SYSTEM_PROMPT, buildAnomalyUserPrompt } from "@/lib/ai/prompts/anomaly";
 import { parseAnomalyResponse } from "@/lib/ai/parsers/anomaly-parser";
 
@@ -23,6 +24,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ scenarios, usage: res.usage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Anomaly generation failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: apiErrorStatus(e) });
   }
 }

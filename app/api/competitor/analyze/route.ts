@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { COMPETITOR_SYSTEM_PROMPT, buildCompetitorUserPrompt } from "@/lib/ai/prompts/competitor";
 import { parseCompetitorResponse } from "@/lib/ai/parsers/competitor-parser";
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Analysis failed";
     return NextResponse.json(
       { error: message },
-      { status: 500 }
+      { status: apiErrorStatus(error) }
     );
   }
 }

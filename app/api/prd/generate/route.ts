@@ -97,7 +97,12 @@ export async function POST(request: NextRequest) {
         send({ type: "done", usage: response.usage });
         controller.close();
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "PRD generation failed";
+        const isAuth = error instanceof Error && (
+          error.message.toLowerCase().includes("401") || error.message.toLowerCase().includes("authentication") || error.message.toLowerCase().includes("api key")
+        );
+        const message = isAuth
+          ? "API Key 无效，请在设置中重新配置 DeepSeek API Key"
+          : error instanceof Error ? error.message : "PRD generation failed";
         send({ type: "error", message });
         controller.close();
       }

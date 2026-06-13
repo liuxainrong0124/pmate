@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiErrorStatus } from "@/lib/utils";
 import { callLlm } from "@/lib/ai/client";
 import { toStringArray } from "@/lib/ai/parsers/utils";
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
   } catch (e: unknown) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "News fetch failed" },
-      { status: 500 }
+      { status: apiErrorStatus(e) }
     );
   }
 }

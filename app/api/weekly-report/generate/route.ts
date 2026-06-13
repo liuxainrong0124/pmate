@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { apiErrorStatus } from "@/lib/utils";
 import { WEEKLY_REPORT_SYSTEM_PROMPT, buildWeeklyReportUserPrompt } from "@/lib/ai/prompts/weekly-report";
 
 export async function POST(request: NextRequest) {
@@ -23,6 +24,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ report: parsed.report || null, usage: res.usage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Weekly report generation failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: apiErrorStatus(e) });
   }
 }
