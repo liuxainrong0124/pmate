@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { toStringArray } from "@/lib/ai/parsers/utils";
 
 const SYSTEM_PROMPT = `你是一个竞品情报分析师，专门追踪科技公司和互联网产品的动态。
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         url: String(n.url || ""),
       })) : [],
       trendSummary: String(parsed.trendSummary || ""),
-      keyChanges: Array.isArray(parsed.keyChanges) ? parsed.keyChanges.map(String) : [],
+      keyChanges: toStringArray(parsed.keyChanges),
       usage: res.usage,
     });
   } catch (e: unknown) {

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { toStringArray } from "./utils";
 
 export interface GeneratedPersona {
   name: string;
@@ -26,9 +27,9 @@ export function parsePersonaResponse(rawJson: string): GeneratedPersona[] {
     occupation: String(p.occupation || ""),
     tagline: String(p.tagline || ""),
     quote: String(p.quote || ""),
-    goals: Array.isArray(p.goals) ? p.goals.map(String) : [],
-    painPoints: Array.isArray(p.painPoints) ? p.painPoints.map(String) : [],
-    behaviors: Array.isArray(p.behaviors) ? p.behaviors.map(String) : [],
+    goals: toStringArray(p.goals),
+    painPoints: toStringArray(p.painPoints),
+    behaviors: toStringArray(p.behaviors),
     segmentName: String(p.segmentName || ""),
   }));
 }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FeedbackReport, FeedbackInsight, ActionItem, FeedbackCategory, SentimentTrend } from "@/types";
+import { toStringArray } from "./utils";
 
 const VALID_CATEGORIES: FeedbackCategory[] = ["bug", "feature_request", "ux", "support", "other"];
 const VALID_SEVERITIES = ["high", "medium", "low"];
@@ -27,7 +28,7 @@ export function parseFeedbackResponse(rawJson: string): FeedbackReport {
         title: String(i.title || ""),
         severity: VALID_SEVERITIES.includes(i.severity) ? i.severity : "medium",
         count: Number(i.count) || 0,
-        quotes: Array.isArray(i.quotes) ? i.quotes.map(String) : [],
+        quotes: toStringArray(i.quotes),
         category: VALID_CATEGORIES.includes(i.category)
           ? i.category
           : "other",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLlm } from "@/lib/ai/client";
+import { toStringArray } from "@/lib/ai/parsers/utils";
 
 const SYSTEM_PROMPT = `你是一位资深数据分析师，专门做指标异动归因分析。
 
@@ -71,10 +72,10 @@ export async function POST(request: NextRequest) {
           evidence: String(r.evidence || ""),
           category: String(r.category || "未知"),
         })) : [],
-        correlatedMetrics: Array.isArray(parsed.correlatedMetrics) ? parsed.correlatedMetrics.map(String) : [],
+        correlatedMetrics: toStringArray(parsed.correlatedMetrics),
         impact: {
           severity: ["高","中","低"].includes(String(parsed.impact?.severity)) ? String(parsed.impact.severity) : "中",
-          affectedSegments: Array.isArray(parsed.impact?.affectedSegments) ? parsed.impact.affectedSegments.map(String) : [],
+          affectedSegments: toStringArray(parsed.impact?.affectedSegments),
           trendPrediction: String(parsed.impact?.trendPrediction || ""),
         },
         actions: Array.isArray(parsed.actions) ? parsed.actions.slice(0, 5).map((a: Record<string, unknown>) => ({

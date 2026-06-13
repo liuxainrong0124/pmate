@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, BarChart3, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Target, Sparkles, Loader2 } from "lucide-react";
-import { getUserApiKey,  getItem, setItem } from "@/lib/store/local-store";
+import { getUserApiKey, getItem, setItem, getUploadedMetrics, getFeedbackHistory, getActivities, getExperiments } from "@/lib/store/local-store";
 
 interface StrategyItem {
   segment: string;
@@ -69,15 +69,86 @@ export function PushStrategy() {
     setLoaded(true);
   }, []);
 
+  function buildRealContext(): { segments: string; historical: string } {
+    const metrics = getUploadedMetrics();
+    const feedback = getFeedbackHistory();
+    const activities = getActivities();
+    const experiments = getExperiments();
+
+    const parts: string[] = [];
+
+    // 1. Real metric data → user behavior patterns
+    if (metrics.length > 0) {
+      parts.push("## 真实指标数据");
+      metrics.forEach((m) => {
+        const lastVals = m.values.slice(-7);
+        const avg = lastVals.length > 0 ? (lastVals.reduce((a, b) => a + b, 0) / lastVals.length).toFixed(0) : "N/A";
+        const trend = lastVals.length >= 2
+          ? lastVals[lastVals.length - 1] > lastVals[0] ? "上升" : "下降"
+          : "持平";
+        parts.push(`- ${m.label}：近7日均值 ${avg}，趋势 ${trend}（${m.dates.slice(-7).join("~")}）`);
+      });
+    }
+
+    // 2. Real feedback → user sentiment & pain points
+    if (feedback.length > 0) {
+      parts.push("\n## 用户反馈摘要");
+      const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+      feedback.forEach((f) => { sentimentCounts[f.sentiment]++; });
+      parts.push(`- 共 ${feedback.length} 条反馈：正面 ${sentimentCounts.positive}，中性 ${sentimentCounts.neutral}，负面 ${sentimentCounts.negative}`);
+      const negativeItems = feedback.filter((f) => f.sentiment === "negative").slice(0, 3);
+      if (negativeItems.length > 0) {
+        parts.push("- 用户主要负面反馈：");
+        negativeItems.forEach((f) => parts.push(`  - ${f.title}：${f.feedbackText?.slice(0, 80) || f.quote?.slice(0, 80)}`));
+      }
+    }
+
+    // 3. Real activities → historical push performance
+    if (activities.length > 0) {
+      parts.push("\n## 历史活动数据");
+      activities.slice(0, 5).forEach((a) => {
+        parts.push(`- ${a.name}（${a.startDate}~${a.endDate}）：目标用户 ${a.targetAudience || "未知"}，点击率 ${(a.clickRate * 100).toFixed(1)}%，转化率 ${(a.conversionRate * 100).toFixed(1)}%`);
+      });
+    }
+
+    // 4. Real experiments → validated insights
+    if (experiments.length > 0) {
+      const finished = experiments.filter((e) => e.status === "ended");
+      if (finished.length > 0) {
+        parts.push("\n## A/B 实验结论");
+        finished.slice(0, 3).forEach((e) => {
+          parts.push(`- ${e.name}：${e.goalMetric}，实验组提升 ${((e.lift ?? 0) * 100).toFixed(1)}%，结论 ${e.conclusion || "未记录"}`);
+        });
+      }
+    }
+
+    // If no real data at all, provide a note
+    if (parts.length === 0) {
+      parts.push('## 注意\n尚无真实产品数据，请基于行业通用的用户分群和推送最佳实践生成策略，所有推荐需标注置信度为"低"。');
+    }
+
+    return {
+      segments: parts.join("\n"),
+      historical: activities.length > 0
+        ? activities.slice(0, 5).map((a) =>
+            `- ${a.name}：${a.targetAudience || "全量"}，点击率 ${(a.clickRate * 100).toFixed(1)}%，转化率 ${(a.conversionRate * 100).toFixed(1)}%`
+          ).join("\n")
+        : "",
+    };
+  }
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
+    const { segments, historical } = buildRealContext();
     try {
       const res = await fetch("/api/push-strategy/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: getUserApiKey() || '',
-          segments: "重度用户（18%，高活跃高付费）、普通用户（45%，中等活跃）、流失风险用户（25%，活跃下降）、已流失用户（12%，30天未活跃）",
+        body: JSON.stringify({
+          apiKey: getUserApiKey() || '',
+          segments,
+          historicalContext: historical || undefined,
         }),
       });
       if (res.ok) {

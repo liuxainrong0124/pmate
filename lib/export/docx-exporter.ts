@@ -146,11 +146,29 @@ export async function exportCompetitorToDocx(report: CompetitorReport): Promise<
           }),
 
           heading("差异化建议", HeadingLevel.HEADING_1),
-          para(report.differentiation),
+          ...(report.differentiation
+            ? (typeof report.differentiation === "string"
+              ? [para(report.differentiation)]
+              : [para(`当前差异化：${report.differentiation.current}`),
+                 para(`未被满足的空间：${report.differentiation.opportunity}`),
+                 para(`建议定位：${report.differentiation.recommendedPositioning}`)])
+            : []),
           heading("定价分析", HeadingLevel.HEADING_1),
-          para(report.pricingAnalysis),
+          ...(report.pricingAnalysis
+            ? (typeof report.pricingAnalysis === "string"
+              ? [para(report.pricingAnalysis)]
+              : [para(`竞品定价：${report.pricingAnalysis.competitorPricing}`),
+                 para(`我方定价：${report.pricingAnalysis.ourPricing}`),
+                 para(`定价差距：${report.pricingAnalysis.pricingGap}`),
+                 para(`建议：${report.pricingAnalysis.recommendation}`)])
+            : []),
           heading("竞品动向预测", HeadingLevel.HEADING_1),
-          para(report.predictedMoves),
+          ...(Array.isArray(report.predictedMoves)
+            ? report.predictedMoves.flatMap((m) => [
+                para(`${m.move}（概率：${m.probability}，时间：${m.timing}）`, true),
+                para(`应对：${m.ourResponse}`),
+              ])
+            : report.predictedMoves ? [para(report.predictedMoves)] : []),
 
           heading("行动时间线", HeadingLevel.HEADING_1),
           ...report.timeline.flatMap((t) => [

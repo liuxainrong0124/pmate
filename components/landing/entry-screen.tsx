@@ -54,6 +54,11 @@ export function EntryScreen() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Offscreen canvas for static scene caching
+    const offscreen = document.createElement("canvas");
+    const offCtx = offscreen.getContext("2d")!;
+    let lastIsDark: boolean | null = null;
+
     let W = 0, H = 0;
     let treeBaseX = 0, treeBaseY = 0;
     let animId = 0;
@@ -67,6 +72,8 @@ export function EntryScreen() {
       const r = canvas!.getBoundingClientRect();
       W = canvas!.width = r.width;
       H = canvas!.height = r.height;
+      offscreen.width = W;
+      offscreen.height = H;
       // Tree positioned with room for full canopy
       treeBaseX = W * 0.48;
       treeBaseY = H * 0.85;
@@ -80,6 +87,7 @@ export function EntryScreen() {
       treeDataRef.current.segments = [];
       treeDataRef.current.blossoms = [];
       treeDataRef.current.dots = [];
+      lastIsDark = null; // force rebuild
       buildFireflies();
     }
 
@@ -185,63 +193,64 @@ export function EntryScreen() {
       firefliesRef.current = flies;
     }
 
-    function drawSky() {
-      const isDark = document.documentElement.classList.contains("dark");
-      const sky = ctx!.createLinearGradient(0, 0, 0, H);
+    // --- Static scene drawing (to offscreen canvas) ---
+    // Uses ctxTarget so the same functions work for both offscreen and main canvas
+
+    function drawSky(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
+      const sky = ctxTarget.createLinearGradient(0, 0, 0, H);
       if (isDark) {
         sky.addColorStop(0, "#0D0D1A"); sky.addColorStop(0.5, "#141428"); sky.addColorStop(1, "#1A1430");
       } else {
         sky.addColorStop(0, "#E8D5C8"); sky.addColorStop(0.4, "#F0E0D6"); sky.addColorStop(1, "#D8C8B8");
       }
-      ctx!.fillStyle = sky;
-      ctx!.fillRect(0, 0, W, H);
+      ctxTarget.fillStyle = sky;
+      ctxTarget.fillRect(0, 0, W, H);
+    }
 
-      // Stars in dark mode
-      if (isDark) {
-        let ss = 777;
-        const sr = () => { ss = (ss * 16807 + 0) % 2147483647; return (ss - 1) / 2147483646; };
-        for (let i = 0; i < 80; i++) {
-          const sx = sr() * W;
-          const sy = sr() * H * 0.55;
-          const sr2 = 0.4 + sr() * 0.8;
-          const twinkle = 0.3 + Math.sin(Date.now() * 0.001 + i * 1.7) * 0.3;
-          ctx!.fillStyle = `rgba(255,255,240,${twinkle * 0.7})`;
-          ctx!.beginPath();
-          ctx!.arc(sx, sy, sr2, 0, Math.PI * 2);
-          ctx!.fill();
-        }
+    function drawStars(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
+      if (!isDark) return;
+      let ss = 777;
+      const sr = () => { ss = (ss * 16807 + 0) % 2147483647; return (ss - 1) / 2147483646; };
+      for (let i = 0; i < 80; i++) {
+        const sx = sr() * W;
+        const sy = sr() * H * 0.55;
+        const sr2 = 0.4 + sr() * 0.8;
+        const twinkle = 0.3 + Math.sin(Date.now() * 0.001 + i * 1.7) * 0.3;
+        ctxTarget.fillStyle = `rgba(255,255,240,${twinkle * 0.7})`;
+        ctxTarget.beginPath();
+        ctxTarget.arc(sx, sy, sr2, 0, Math.PI * 2);
+        ctxTarget.fill();
       }
     }
 
-    function drawFlower(cx: number, cy: number, size: number, petalH: number, petalS: number, petalL: number, alpha: number, petalCount: number) {
+    function drawFlower(ctxTarget: CanvasRenderingContext2D, cx: number, cy: number, size: number, petalH: number, petalS: number, petalL: number, alpha: number, petalCount: number) {
       // Natural bezier petals radiating from center
       for (let i = 0; i < petalCount; i++) {
         const angle = (i / petalCount) * Math.PI * 2 - Math.PI / 2;
-        ctx!.save();
-        ctx!.translate(cx, cy);
-        ctx!.rotate(angle);
+        ctxTarget.save();
+        ctxTarget.translate(cx, cy);
+        ctxTarget.rotate(angle);
 
         const s = size * 0.7;
-        ctx!.fillStyle = `hsla(${petalH},${petalS}%,${petalL}%,${alpha})`;
-        ctx!.beginPath();
-        ctx!.moveTo(0, 0);
+        ctxTarget.fillStyle = `hsla(${petalH},${petalS}%,${petalL}%,${alpha})`;
+        ctxTarget.beginPath();
+        ctxTarget.moveTo(0, 0);
         // Left half of petal
-        ctx!.bezierCurveTo(s * 0.25, -s * 0.1, s * 0.35, -s * 0.6, 0, -s);
+        ctxTarget.bezierCurveTo(s * 0.25, -s * 0.1, s * 0.35, -s * 0.6, 0, -s);
         // Right half of petal
-        ctx!.bezierCurveTo(-s * 0.35, -s * 0.6, -s * 0.25, -s * 0.1, 0, 0);
-        ctx!.fill();
-        ctx!.restore();
+        ctxTarget.bezierCurveTo(-s * 0.35, -s * 0.6, -s * 0.25, -s * 0.1, 0, 0);
+        ctxTarget.fill();
+        ctxTarget.restore();
       }
       // Center
-      ctx!.fillStyle = `hsla(${petalH + 20},${petalS}%,${petalL - 15}%,${alpha * 1.2})`;
-      ctx!.beginPath();
-      ctx!.arc(cx, cy, size * 0.12, 0, Math.PI * 2);
-      ctx!.fill();
+      ctxTarget.fillStyle = `hsla(${petalH + 20},${petalS}%,${petalL - 15}%,${alpha * 1.2})`;
+      ctxTarget.beginPath();
+      ctxTarget.arc(cx, cy, size * 0.12, 0, Math.PI * 2);
+      ctxTarget.fill();
     }
 
-    function drawTree() {
+    function drawTree(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
       ensureTreeBuilt();
-      const isDark = document.documentElement.classList.contains("dark");
       const trunkH = 200;
       const topY = treeBaseY - trunkH;
 
@@ -251,72 +260,72 @@ export function EntryScreen() {
       const tl = treeBaseX - 10;
       const tr = treeBaseX + 9;
 
-      ctx!.beginPath();
-      ctx!.moveTo(bl, treeBaseY);
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(bl, treeBaseY);
       // Left side: slight outward bulge then taper to top (still wide)
-      ctx!.bezierCurveTo(bl - 6, treeBaseY - 55, tl - 4, topY + 40, tl, topY);
+      ctxTarget.bezierCurveTo(bl - 6, treeBaseY - 55, tl - 4, topY + 40, tl, topY);
       // Top — curved, not a point
-      ctx!.quadraticCurveTo(treeBaseX - 1, topY - 6, treeBaseX + 1, topY - 5);
-      ctx!.quadraticCurveTo(treeBaseX + 3, topY - 2, tr, topY);
+      ctxTarget.quadraticCurveTo(treeBaseX - 1, topY - 6, treeBaseX + 1, topY - 5);
+      ctxTarget.quadraticCurveTo(treeBaseX + 3, topY - 2, tr, topY);
       // Right side
-      ctx!.bezierCurveTo(tr + 5, topY + 40, br + 6, treeBaseY - 55, br, treeBaseY);
-      ctx!.closePath();
+      ctxTarget.bezierCurveTo(tr + 5, topY + 40, br + 6, treeBaseY - 55, br, treeBaseY);
+      ctxTarget.closePath();
 
       // Trunk gradient
-      const trunkGrad = ctx!.createLinearGradient(treeBaseX - 25, 0, treeBaseX + 20, 0);
+      const trunkGrad = ctxTarget.createLinearGradient(treeBaseX - 25, 0, treeBaseX + 20, 0);
       trunkGrad.addColorStop(0, "#4A2E20");
       trunkGrad.addColorStop(0.3, "#6B4430");
       trunkGrad.addColorStop(0.55, "#7A5040");
       trunkGrad.addColorStop(0.75, "#6B4430");
       trunkGrad.addColorStop(1, "#3D2518");
-      ctx!.fillStyle = trunkGrad;
-      ctx!.fill();
+      ctxTarget.fillStyle = trunkGrad;
+      ctxTarget.fill();
 
       // Bark texture lines
-      ctx!.strokeStyle = "rgba(0,0,0,0.05)";
-      ctx!.lineWidth = 1.2;
+      ctxTarget.strokeStyle = "rgba(0,0,0,0.05)";
+      ctxTarget.lineWidth = 1.2;
       for (let i = 0; i < 5; i++) {
         const ty = treeBaseY - 20 - i * 36;
         const hw = 30 - i * 4;
-        ctx!.beginPath();
-        ctx!.moveTo(treeBaseX - hw, ty);
-        ctx!.quadraticCurveTo(treeBaseX + (i % 2 === 0 ? 6 : -5), ty + 4, treeBaseX + hw - 3, ty);
-        ctx!.stroke();
+        ctxTarget.beginPath();
+        ctxTarget.moveTo(treeBaseX - hw, ty);
+        ctxTarget.quadraticCurveTo(treeBaseX + (i % 2 === 0 ? 6 : -5), ty + 4, treeBaseX + hw - 3, ty);
+        ctxTarget.stroke();
       }
 
       // Root flares
-      ctx!.strokeStyle = "#4A2E20";
-      ctx!.lineWidth = 5;
-      ctx!.lineCap = "round";
-      ctx!.beginPath();
-      ctx!.moveTo(bl, treeBaseY);
-      ctx!.quadraticCurveTo(bl - 22, treeBaseY - 10, bl - 32, treeBaseY + 8);
-      ctx!.stroke();
-      ctx!.beginPath();
-      ctx!.moveTo(br, treeBaseY);
-      ctx!.quadraticCurveTo(br + 20, treeBaseY - 8, br + 30, treeBaseY + 6);
-      ctx!.stroke();
+      ctxTarget.strokeStyle = "#4A2E20";
+      ctxTarget.lineWidth = 5;
+      ctxTarget.lineCap = "round";
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(bl, treeBaseY);
+      ctxTarget.quadraticCurveTo(bl - 22, treeBaseY - 10, bl - 32, treeBaseY + 8);
+      ctxTarget.stroke();
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(br, treeBaseY);
+      ctxTarget.quadraticCurveTo(br + 20, treeBaseY - 8, br + 30, treeBaseY + 6);
+      ctxTarget.stroke();
       // Smaller surface roots
-      ctx!.lineWidth = 3;
-      ctx!.strokeStyle = "#5A3828";
-      ctx!.beginPath();
-      ctx!.moveTo(bl + 12, treeBaseY + 1);
-      ctx!.quadraticCurveTo(bl - 5, treeBaseY - 4, bl - 16, treeBaseY + 4);
-      ctx!.stroke();
-      ctx!.beginPath();
-      ctx!.moveTo(br - 10, treeBaseY + 1);
-      ctx!.quadraticCurveTo(br + 8, treeBaseY - 3, br + 16, treeBaseY + 3);
-      ctx!.stroke();
+      ctxTarget.lineWidth = 3;
+      ctxTarget.strokeStyle = "#5A3828";
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(bl + 12, treeBaseY + 1);
+      ctxTarget.quadraticCurveTo(bl - 5, treeBaseY - 4, bl - 16, treeBaseY + 4);
+      ctxTarget.stroke();
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(br - 10, treeBaseY + 1);
+      ctxTarget.quadraticCurveTo(br + 8, treeBaseY - 3, br + 16, treeBaseY + 3);
+      ctxTarget.stroke();
 
       // Branches
       treeDataRef.current.segments.forEach((s) => {
-        ctx!.beginPath();
-        ctx!.moveTo(s.x, s.y);
-        ctx!.quadraticCurveTo(s.cx, s.cy, s.endX, s.endY);
-        ctx!.strokeStyle = "#5A3D32";
-        ctx!.lineWidth = s.w;
-        ctx!.lineCap = "round";
-        ctx!.stroke();
+        ctxTarget.beginPath();
+        ctxTarget.moveTo(s.x, s.y);
+        ctxTarget.quadraticCurveTo(s.cx, s.cy, s.endX, s.endY);
+        ctxTarget.strokeStyle = "#5A3D32";
+        ctxTarget.lineWidth = s.w;
+        ctxTarget.lineCap = "round";
+        ctxTarget.stroke();
       });
 
       // Deterministic hash for stable flower colors across frames
@@ -335,29 +344,27 @@ export function EntryScreen() {
         const palette = palettes[idx % palettes.length];
         const pc = petalCounts[idx % petalCounts.length];
         const h = posHash(b.x, b.y);
-        drawFlower(b.x, b.y, b.r * 1.4, palette[0] + (h - 0.5) * 10, palette[1], palette[2] + (h - 0.5) * 10, 0.85, pc);
+        drawFlower(ctxTarget, b.x, b.y, b.r * 1.4, palette[0] + (h - 0.5) * 10, palette[1], palette[2] + (h - 0.5) * 10, 0.85, pc);
       });
     }
 
-    function drawGround() {
-      const isDark = document.documentElement.classList.contains("dark");
-      const g = ctx!.createLinearGradient(0, treeBaseY, 0, H);
+    function drawGround(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
+      const g = ctxTarget.createLinearGradient(0, treeBaseY, 0, H);
       if (isDark) {
         g.addColorStop(0, "#2A2A20"); g.addColorStop(0.3, "#25251C"); g.addColorStop(1, "#1A1A14");
       } else {
         g.addColorStop(0, "#B8A88A"); g.addColorStop(0.3, "#A89878"); g.addColorStop(0.7, "#988868"); g.addColorStop(1, "#887858");
       }
-      ctx!.fillStyle = g;
-      ctx!.beginPath();
-      ctx!.moveTo(0, treeBaseY - 8);
-      ctx!.quadraticCurveTo(W * 0.25, treeBaseY - 20, W * 0.5, treeBaseY - 10);
-      ctx!.quadraticCurveTo(W * 0.75, treeBaseY + 2, W, treeBaseY - 14);
-      ctx!.lineTo(W, H); ctx!.lineTo(0, H); ctx!.closePath();
-      ctx!.fill();
+      ctxTarget.fillStyle = g;
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(0, treeBaseY - 8);
+      ctxTarget.quadraticCurveTo(W * 0.25, treeBaseY - 20, W * 0.5, treeBaseY - 10);
+      ctxTarget.quadraticCurveTo(W * 0.75, treeBaseY + 2, W, treeBaseY - 14);
+      ctxTarget.lineTo(W, H); ctxTarget.lineTo(0, H); ctxTarget.closePath();
+      ctxTarget.fill();
     }
 
-    function drawHouse() {
-      const isDark = document.documentElement.classList.contains("dark");
+    function drawHouse(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
       const hx = houseX;
       const hy = houseY;
       const bodyW = 90;
@@ -365,53 +372,53 @@ export function EntryScreen() {
       const roofH = 45;
 
       // House shadow (cast by lamp from left)
-      ctx!.save();
-      ctx!.fillStyle = "rgba(0,0,0,0.06)";
-      ctx!.beginPath();
-      ctx!.moveTo(hx + bodyW, hy - bodyH);
-      ctx!.lineTo(hx + bodyW + 15, hy - bodyH + 5);
-      ctx!.lineTo(hx + bodyW + 15, hy + 5);
-      ctx!.lineTo(hx + bodyW, hy);
-      ctx!.closePath();
-      ctx!.fill();
-      ctx!.restore();
+      ctxTarget.save();
+      ctxTarget.fillStyle = "rgba(0,0,0,0.06)";
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(hx + bodyW, hy - bodyH);
+      ctxTarget.lineTo(hx + bodyW + 15, hy - bodyH + 5);
+      ctxTarget.lineTo(hx + bodyW + 15, hy + 5);
+      ctxTarget.lineTo(hx + bodyW, hy);
+      ctxTarget.closePath();
+      ctxTarget.fill();
+      ctxTarget.restore();
 
       // Body
-      const bodyGrad = ctx!.createLinearGradient(0, hy - bodyH, 0, hy);
+      const bodyGrad = ctxTarget.createLinearGradient(0, hy - bodyH, 0, hy);
       if (isDark) {
         bodyGrad.addColorStop(0, "#3D3030"); bodyGrad.addColorStop(1, "#2A2020");
       } else {
         bodyGrad.addColorStop(0, "#E8DCC8"); bodyGrad.addColorStop(1, "#D4C8B0");
       }
-      ctx!.fillStyle = bodyGrad;
-      ctx!.fillRect(hx, hy - bodyH, bodyW, bodyH);
-      ctx!.strokeStyle = isDark ? "#4A3A3A" : "#B8A888";
-      ctx!.lineWidth = 1.5;
-      ctx!.strokeRect(hx, hy - bodyH, bodyW, bodyH);
+      ctxTarget.fillStyle = bodyGrad;
+      ctxTarget.fillRect(hx, hy - bodyH, bodyW, bodyH);
+      ctxTarget.strokeStyle = isDark ? "#4A3A3A" : "#B8A888";
+      ctxTarget.lineWidth = 1.5;
+      ctxTarget.strokeRect(hx, hy - bodyH, bodyW, bodyH);
 
       // Roof
-      ctx!.fillStyle = isDark ? "#4A2828" : "#8B4513";
-      ctx!.beginPath();
-      ctx!.moveTo(hx - 12, hy - bodyH);
-      ctx!.lineTo(hx + bodyW / 2, hy - bodyH - roofH);
-      ctx!.lineTo(hx + bodyW + 12, hy - bodyH);
-      ctx!.closePath();
-      ctx!.fill();
-      ctx!.strokeStyle = isDark ? "#5A3535" : "#6B3410";
-      ctx!.lineWidth = 1.5;
-      ctx!.stroke();
+      ctxTarget.fillStyle = isDark ? "#4A2828" : "#8B4513";
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(hx - 12, hy - bodyH);
+      ctxTarget.lineTo(hx + bodyW / 2, hy - bodyH - roofH);
+      ctxTarget.lineTo(hx + bodyW + 12, hy - bodyH);
+      ctxTarget.closePath();
+      ctxTarget.fill();
+      ctxTarget.strokeStyle = isDark ? "#5A3535" : "#6B3410";
+      ctxTarget.lineWidth = 1.5;
+      ctxTarget.stroke();
 
       // Door
-      ctx!.fillStyle = isDark ? "#5A3A2A" : "#8B6914";
-      ctx!.fillRect(hx + bodyW / 2 - 10, hy - 32, 20, 32);
-      ctx!.strokeStyle = isDark ? "#6B4A3A" : "#6B4A10";
-      ctx!.lineWidth = 1;
-      ctx!.strokeRect(hx + bodyW / 2 - 10, hy - 32, 20, 32);
+      ctxTarget.fillStyle = isDark ? "#5A3A2A" : "#8B6914";
+      ctxTarget.fillRect(hx + bodyW / 2 - 10, hy - 32, 20, 32);
+      ctxTarget.strokeStyle = isDark ? "#6B4A3A" : "#6B4A10";
+      ctxTarget.lineWidth = 1;
+      ctxTarget.strokeRect(hx + bodyW / 2 - 10, hy - 32, 20, 32);
       // Doorknob
-      ctx!.fillStyle = "#D4A030";
-      ctx!.beginPath();
-      ctx!.arc(hx + bodyW / 2 + 5, hy - 16, 2.5, 0, Math.PI * 2);
-      ctx!.fill();
+      ctxTarget.fillStyle = "#D4A030";
+      ctxTarget.beginPath();
+      ctxTarget.arc(hx + bodyW / 2 + 5, hy - 16, 2.5, 0, Math.PI * 2);
+      ctxTarget.fill();
 
       // Windows
       const windows = [
@@ -420,47 +427,46 @@ export function EntryScreen() {
       ];
       windows.forEach((win) => {
         // Window frame
-        ctx!.fillStyle = isDark ? "#2A1A1A" : "#8B7355";
-        ctx!.fillRect(win.wx, win.wy, 22, 20);
-        ctx!.strokeStyle = isDark ? "#5A3A3A" : "#6B5335";
-        ctx!.lineWidth = 1.5;
-        ctx!.strokeRect(win.wx, win.wy, 22, 20);
+        ctxTarget.fillStyle = isDark ? "#2A1A1A" : "#8B7355";
+        ctxTarget.fillRect(win.wx, win.wy, 22, 20);
+        ctxTarget.strokeStyle = isDark ? "#5A3A3A" : "#6B5335";
+        ctxTarget.lineWidth = 1.5;
+        ctxTarget.strokeRect(win.wx, win.wy, 22, 20);
 
         if (isDark) {
           // Glowing window effect
-          const glowGrad = ctx!.createRadialGradient(win.wx + 11, win.wy + 10, 2, win.wx + 11, win.wy + 10, 30);
+          const glowGrad = ctxTarget.createRadialGradient(win.wx + 11, win.wy + 10, 2, win.wx + 11, win.wy + 10, 30);
           glowGrad.addColorStop(0, "rgba(255,200,100,0.9)");
           glowGrad.addColorStop(0.5, "rgba(255,180,80,0.3)");
           glowGrad.addColorStop(1, "rgba(255,150,50,0)");
-          ctx!.fillStyle = glowGrad;
-          ctx!.fillRect(win.wx - 8, win.wy - 8, 38, 36);
+          ctxTarget.fillStyle = glowGrad;
+          ctxTarget.fillRect(win.wx - 8, win.wy - 8, 38, 36);
         }
 
         // Window pane (warm light in dark mode)
-        ctx!.fillStyle = isDark ? "rgba(255,200,130,0.7)" : "rgba(200,220,255,0.5)";
-        ctx!.fillRect(win.wx + 2, win.wy + 2, 8, 16);
-        ctx!.fillRect(win.wx + 12, win.wy + 2, 8, 16);
+        ctxTarget.fillStyle = isDark ? "rgba(255,200,130,0.7)" : "rgba(200,220,255,0.5)";
+        ctxTarget.fillRect(win.wx + 2, win.wy + 2, 8, 16);
+        ctxTarget.fillRect(win.wx + 12, win.wy + 2, 8, 16);
         // Cross bars
-        ctx!.strokeStyle = isDark ? "#6B4A30" : "#6B5335";
-        ctx!.lineWidth = 1;
-        ctx!.beginPath();
-        ctx!.moveTo(win.wx + 11, win.wy); ctx!.lineTo(win.wx + 11, win.wy + 20);
-        ctx!.moveTo(win.wx, win.wy + 10); ctx!.lineTo(win.wx + 22, win.wy + 10);
-        ctx!.stroke();
+        ctxTarget.strokeStyle = isDark ? "#6B4A30" : "#6B5335";
+        ctxTarget.lineWidth = 1;
+        ctxTarget.beginPath();
+        ctxTarget.moveTo(win.wx + 11, win.wy); ctxTarget.lineTo(win.wx + 11, win.wy + 20);
+        ctxTarget.moveTo(win.wx, win.wy + 10); ctxTarget.lineTo(win.wx + 22, win.wy + 10);
+        ctxTarget.stroke();
 
         // Window glow on ground in dark mode
         if (isDark) {
-          const wgGrad = ctx!.createLinearGradient(0, hy, 0, hy + 30);
+          const wgGrad = ctxTarget.createLinearGradient(0, hy, 0, hy + 30);
           wgGrad.addColorStop(0, "rgba(255,180,80,0.12)");
           wgGrad.addColorStop(1, "rgba(255,150,50,0)");
-          ctx!.fillStyle = wgGrad;
-          ctx!.fillRect(win.wx - 5, hy, 32, 30);
+          ctxTarget.fillStyle = wgGrad;
+          ctxTarget.fillRect(win.wx - 5, hy, 32, 30);
         }
       });
     }
 
-    function drawStonePath() {
-      const isDark = document.documentElement.classList.contains("dark");
+    function drawStonePath(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
       // Curving path from near tree base toward house door
       let ps = 555;
       const pr = () => { ps = (ps * 16807 + 0) % 2147483647; return (ps - 1) / 2147483646; };
@@ -488,80 +494,92 @@ export function EntryScreen() {
         const sw = 7 + pr() * 7;
         const sh = 5 + pr() * 5;
 
-        ctx!.fillStyle = isDark ? `rgba(80,75,65,${0.7 + pr() * 0.3})` : `rgba(160,150,140,${0.7 + pr() * 0.3})`;
-        ctx!.strokeStyle = isDark ? "rgba(60,55,50,0.5)" : "rgba(140,130,120,0.5)";
-        ctx!.lineWidth = 0.8;
-        ctx!.beginPath();
+        ctxTarget.fillStyle = isDark ? `rgba(80,75,65,${0.7 + pr() * 0.3})` : `rgba(160,150,140,${0.7 + pr() * 0.3})`;
+        ctxTarget.strokeStyle = isDark ? "rgba(60,55,50,0.5)" : "rgba(140,130,120,0.5)";
+        ctxTarget.lineWidth = 0.8;
+        ctxTarget.beginPath();
         // Rounded stone shape
-        ctx!.ellipse(sx, sy, sw / 2, sh / 2, pr() * 0.3, 0, Math.PI * 2);
-        ctx!.fill();
-        ctx!.stroke();
+        ctxTarget.ellipse(sx, sy, sw / 2, sh / 2, pr() * 0.3, 0, Math.PI * 2);
+        ctxTarget.fill();
+        ctxTarget.stroke();
       }
     }
 
-    function drawLamp() {
-      const isDark = document.documentElement.classList.contains("dark");
+    function drawLamp(ctxTarget: CanvasRenderingContext2D, isDark: boolean) {
       const lx = lampX;
       const ly = lampY;
 
       // Lamp pole
-      ctx!.strokeStyle = isDark ? "#5A5A50" : "#3A3A30";
-      ctx!.lineWidth = 4;
-      ctx!.beginPath();
-      ctx!.moveTo(lx, ly);
-      ctx!.lineTo(lx, ly - 80);
-      ctx!.stroke();
+      ctxTarget.strokeStyle = isDark ? "#5A5A50" : "#3A3A30";
+      ctxTarget.lineWidth = 4;
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(lx, ly);
+      ctxTarget.lineTo(lx, ly - 80);
+      ctxTarget.stroke();
       // Pole highlight
-      ctx!.strokeStyle = isDark ? "#7A7A6A" : "#5A5A4A";
-      ctx!.lineWidth = 1.5;
-      ctx!.beginPath();
-      ctx!.moveTo(lx + 1, ly);
-      ctx!.lineTo(lx + 1, ly - 78);
-      ctx!.stroke();
+      ctxTarget.strokeStyle = isDark ? "#7A7A6A" : "#5A5A4A";
+      ctxTarget.lineWidth = 1.5;
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(lx + 1, ly);
+      ctxTarget.lineTo(lx + 1, ly - 78);
+      ctxTarget.stroke();
 
       // Lamp head
-      ctx!.fillStyle = isDark ? "#3A3A32" : "#2A2A22";
-      ctx!.fillRect(lx - 8, ly - 88, 16, 8);
+      ctxTarget.fillStyle = isDark ? "#3A3A32" : "#2A2A22";
+      ctxTarget.fillRect(lx - 8, ly - 88, 16, 8);
       // Lamp glass
-      ctx!.fillStyle = isDark ? "rgba(255,220,150,0.25)" : "rgba(255,240,200,0.15)";
-      ctx!.fillRect(lx - 6, ly - 92, 12, 8);
+      ctxTarget.fillStyle = isDark ? "rgba(255,220,150,0.25)" : "rgba(255,240,200,0.15)";
+      ctxTarget.fillRect(lx - 6, ly - 92, 12, 8);
 
       if (isDark) {
         // Lamp glow cone
-        const lampGlow = ctx!.createRadialGradient(lx, ly - 88, 3, lx, ly + 10, 120);
+        const lampGlow = ctxTarget.createRadialGradient(lx, ly - 88, 3, lx, ly + 10, 120);
         lampGlow.addColorStop(0, "rgba(255,220,140,0.35)");
         lampGlow.addColorStop(0.3, "rgba(255,200,100,0.15)");
         lampGlow.addColorStop(0.7, "rgba(255,160,60,0.03)");
         lampGlow.addColorStop(1, "rgba(255,100,30,0)");
-        ctx!.fillStyle = lampGlow;
-        ctx!.beginPath();
-        ctx!.moveTo(lx - 40, ly);
-        ctx!.lineTo(lx + 40, ly);
-        ctx!.quadraticCurveTo(lx + 50, ly + 80, lx + 5, ly + 100);
-        ctx!.quadraticCurveTo(lx, ly + 100, lx - 5, ly + 100);
-        ctx!.quadraticCurveTo(lx - 50, ly + 80, lx - 40, ly);
-        ctx!.fill();
+        ctxTarget.fillStyle = lampGlow;
+        ctxTarget.beginPath();
+        ctxTarget.moveTo(lx - 40, ly);
+        ctxTarget.lineTo(lx + 40, ly);
+        ctxTarget.quadraticCurveTo(lx + 50, ly + 80, lx + 5, ly + 100);
+        ctxTarget.quadraticCurveTo(lx, ly + 100, lx - 5, ly + 100);
+        ctxTarget.quadraticCurveTo(lx - 50, ly + 80, lx - 40, ly);
+        ctxTarget.fill();
 
         // Brighter center glow
-        const centerGlow = ctx!.createRadialGradient(lx, ly - 88, 1, lx, ly - 80, 25);
+        const centerGlow = ctxTarget.createRadialGradient(lx, ly - 88, 1, lx, ly - 80, 25);
         centerGlow.addColorStop(0, "rgba(255,240,180,0.8)");
         centerGlow.addColorStop(0.5, "rgba(255,200,120,0.25)");
         centerGlow.addColorStop(1, "rgba(255,150,60,0)");
-        ctx!.fillStyle = centerGlow;
-        ctx!.beginPath();
-        ctx!.arc(lx, ly - 85, 22, 0, Math.PI * 2);
-        ctx!.fill();
+        ctxTarget.fillStyle = centerGlow;
+        ctxTarget.beginPath();
+        ctxTarget.arc(lx, ly - 85, 22, 0, Math.PI * 2);
+        ctxTarget.fill();
 
         // Lamp light on ground
-        const groundGlow = ctx!.createRadialGradient(lx, ly, 0, lx, ly, 50);
+        const groundGlow = ctxTarget.createRadialGradient(lx, ly, 0, lx, ly, 50);
         groundGlow.addColorStop(0, "rgba(255,200,120,0.2)");
         groundGlow.addColorStop(0.5, "rgba(255,180,80,0.08)");
         groundGlow.addColorStop(1, "rgba(255,150,40,0)");
-        ctx!.fillStyle = groundGlow;
-        ctx!.beginPath();
-        ctx!.ellipse(lx, ly + 2, 50, 18, 0, 0, Math.PI * 2);
-        ctx!.fill();
+        ctxTarget.fillStyle = groundGlow;
+        ctxTarget.beginPath();
+        ctxTarget.ellipse(lx, ly + 2, 50, 18, 0, 0, Math.PI * 2);
+        ctxTarget.fill();
       }
+    }
+
+    // Build the static scene on the offscreen canvas
+    function buildStaticScene(isDark: boolean) {
+      if (lastIsDark === isDark && treeDataRef.current.built) return; // already cached
+      lastIsDark = isDark;
+      ensureTreeBuilt();
+      drawSky(offCtx, isDark);
+      drawGround(offCtx, isDark);
+      drawStonePath(offCtx, isDark);
+      drawLamp(offCtx, isDark);
+      drawHouse(offCtx, isDark);
+      drawTree(offCtx, isDark);
     }
 
     function drawFireflies(ts: number) {
@@ -619,12 +637,16 @@ export function EntryScreen() {
     }
 
     function render(ts: number) {
-      drawSky();
-      drawGround();
-      drawStonePath();
-      drawLamp();
-      drawHouse();
-      drawTree();
+      const isDark = document.documentElement.classList.contains("dark");
+
+      // Rebuild static scene cache when theme changes
+      buildStaticScene(isDark);
+
+      // Blit static scene from offscreen canvas to main canvas
+      ctx!.drawImage(offscreen, 0, 0);
+
+      // Draw dynamic elements on top
+      drawStars(ctx!, isDark);
       drawFireflies(ts);
       updatePetals(ts);
       animId = requestAnimationFrame(render);

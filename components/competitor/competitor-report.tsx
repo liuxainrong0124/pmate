@@ -126,11 +126,17 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
               {(report.company.recentUpdates?.length ?? 0) > 0 && (
                 <div>
                   <span className="text-xs text-gray-400">近期更新</span>
-                  <ul className="mt-1 space-y-1">
+                  <ul className="mt-1 space-y-2">
                     {report.company.recentUpdates.map((u, j) => (
-                      <li key={j} className="text-xs text-gray-600 flex items-start gap-1.5">
-                        <span className="text-indigo-400 mt-0.5 shrink-0">+</span>
-                        {u}
+                      <li key={j} className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
+                        <div className="font-medium">{typeof u === "string" ? u : u.update}</div>
+                        {typeof u !== "string" && (u.date || u.significance || u.strategicIntent) && (
+                          <div className="flex gap-2 mt-0.5 text-gray-400">
+                            {u.date && <span>{u.date}</span>}
+                            {u.significance && <span>· {u.significance}</span>}
+                            {u.strategicIntent && <span className="text-indigo-400">· 意图：{u.strategicIntent}</span>}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -149,58 +155,78 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
             <h3 className="font-semibold text-gray-900">SWOT 分析</h3>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            {/* Strengths - Green */}
+            {/* Strengths */}
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
               <h4 className="text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5" /> 优势 Strengths
               </h4>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {(report.swot.strengths ?? []).map((s, i) => (
-                  <li key={i} className="text-xs text-emerald-800 flex items-start gap-1.5">
-                    <span className="text-emerald-400 mt-0.5 shrink-0">+</span>
-                    {s}
+                  <li key={i} className="text-xs">
+                    <span className="text-emerald-800 font-medium">+ {typeof s === "string" ? s : s.item}</span>
+                    {typeof s !== "string" && (s.evidence || s.defensibility) && (
+                      <div className="mt-0.5 ml-4 text-gray-500 space-y-0.5">
+                        {s.evidence && <div>📌 {s.evidence}</div>}
+                        {s.defensibility && <div>🛡 可防御性：{s.defensibility}</div>}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
-            {/* Weaknesses - Red */}
+            {/* Weaknesses */}
             <div className="rounded-xl border border-red-200 bg-red-50/50 p-4">
               <h4 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" /> 劣势 Weaknesses
               </h4>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {(report.swot.weaknesses ?? []).map((s, i) => (
-                  <li key={i} className="text-xs text-red-800 flex items-start gap-1.5">
-                    <span className="text-red-400 mt-0.5 shrink-0">-</span>
-                    {s}
+                  <li key={i} className="text-xs">
+                    <span className="text-red-800 font-medium">- {typeof s === "string" ? s : s.item}</span>
+                    {typeof s !== "string" && (s.evidence || s.exploitability) && (
+                      <div className="mt-0.5 ml-4 text-gray-500 space-y-0.5">
+                        {s.evidence && <div>📌 {s.evidence}</div>}
+                        {s.exploitability && <div>🎯 {s.exploitability}</div>}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
-            {/* Opportunities - Blue */}
+            {/* Opportunities */}
             <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
               <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5" /> 机会 Opportunities
               </h4>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {(report.swot.opportunities ?? []).map((s, i) => (
-                  <li key={i} className="text-xs text-blue-800 flex items-start gap-1.5">
-                    <span className="text-blue-400 mt-0.5 shrink-0">+</span>
-                    {s}
+                  <li key={i} className="text-xs">
+                    <span className="text-blue-800 font-medium">+ {typeof s === "string" ? s : s.item}</span>
+                    {typeof s !== "string" && (s.timeWindow || s.effortRequired) && (
+                      <div className="mt-0.5 ml-4 text-gray-500 flex gap-2">
+                        {s.timeWindow && <span>⏱ {s.timeWindow}</span>}
+                        {s.effortRequired && <span>· 💪 {s.effortRequired}</span>}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
-            {/* Threats - Orange */}
+            {/* Threats */}
             <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
               <h4 className="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" /> 威胁 Threats
               </h4>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {(report.swot.threats ?? []).map((s, i) => (
-                  <li key={i} className="text-xs text-orange-800 flex items-start gap-1.5">
-                    <span className="text-orange-400 mt-0.5 shrink-0">-</span>
-                    {s}
+                  <li key={i} className="text-xs">
+                    <span className="text-orange-800 font-medium">- {typeof s === "string" ? s : s.item}</span>
+                    {typeof s !== "string" && (s.urgency || s.ourDefense) && (
+                      <div className="mt-0.5 ml-4 text-gray-500 space-y-0.5">
+                        {s.urgency && <div>⚠ 紧迫度：{s.urgency}</div>}
+                        {s.ourDefense && <div>🛡 {s.ourDefense}</div>}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -386,7 +412,16 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
               <DollarSign className="w-4 h-4 text-blue-500" />
               <h4 className="font-semibold text-gray-900 text-sm">定价分析</h4>
             </div>
-            <p className="text-sm text-gray-700 leading-relaxed">{report.pricingAnalysis}</p>
+            {typeof report.pricingAnalysis === "string" ? (
+              <p className="text-sm text-gray-700 leading-relaxed">{report.pricingAnalysis}</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div><span className="text-gray-400 text-xs">竞品定价</span><p className="text-gray-700">{report.pricingAnalysis.competitorPricing}</p></div>
+                <div><span className="text-gray-400 text-xs">我方定价</span><p className="text-gray-700">{report.pricingAnalysis.ourPricing}</p></div>
+                <div><span className="text-gray-400 text-xs">定价差距</span><p className="text-gray-700">{report.pricingAnalysis.pricingGap}</p></div>
+                <div className="pt-2 border-t border-gray-100"><span className="text-gray-400 text-xs">建议</span><p className="text-gray-900 font-medium">{report.pricingAnalysis.recommendation}</p></div>
+              </div>
+            )}
           </div>
         )}
         {report.differentiation && (
@@ -395,7 +430,15 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
               <Crosshair className="w-4 h-4 text-indigo-500" />
               <h4 className="font-semibold text-gray-900 text-sm">差异化建议</h4>
             </div>
-            <p className="text-sm text-gray-700 leading-relaxed">{report.differentiation}</p>
+            {typeof report.differentiation === "string" ? (
+              <p className="text-sm text-gray-700 leading-relaxed">{report.differentiation}</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div><span className="text-gray-400 text-xs">当前差异化</span><p className="text-gray-700">{report.differentiation.current}</p></div>
+                <div><span className="text-gray-400 text-xs">未被满足的空间</span><p className="text-gray-700">{report.differentiation.opportunity}</p></div>
+                <div className="pt-2 border-t border-gray-100"><span className="text-gray-400 text-xs">建议定位</span><p className="text-gray-900 font-medium">{report.differentiation.recommendedPositioning}</p></div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -424,13 +467,28 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       )}
 
       {/* Predicted Moves */}
-      {report.predictedMoves && (
+      {(Array.isArray(report.predictedMoves) ? report.predictedMoves.length > 0 : report.predictedMoves) && (
         <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/30 to-white p-5">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="w-4 h-4 text-purple-500" />
             <h4 className="font-semibold text-gray-900 text-sm">竞品动向预测</h4>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{report.predictedMoves}</p>
+          {typeof report.predictedMoves === "string" ? (
+            <p className="text-sm text-gray-700 leading-relaxed">{report.predictedMoves}</p>
+          ) : (
+            <div className="space-y-3">
+              {report.predictedMoves.map((m, i) => (
+                <div key={i} className="border-l-2 border-purple-300 pl-3 text-sm">
+                  <p className="font-medium text-gray-900">{m.move}</p>
+                  <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                    {m.probability && <span>概率：{m.probability}</span>}
+                    {m.timing && <span>· {m.timing}</span>}
+                    {m.ourResponse && <span className="text-purple-600">· 应对：{m.ourResponse}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -99,10 +99,42 @@ export interface SWOTItem {
   relatedCompetitor: string;
 }
 
+export interface SwotStrength { item: string; evidence: string; defensibility: string; }
+export interface SwotWeakness { item: string; evidence: string; exploitability: string; }
+export interface SwotOpportunity { item: string; timeWindow: string; effortRequired: string; }
+export interface SwotThreat { item: string; urgency: string; ourDefense: string; }
+
 export interface TimelinePhase {
   phase: "短期(1个月)" | "中期(3个月)" | "长期(6个月)";
   actions: string[];
   goal: string;
+}
+
+export interface RecentUpdate {
+  update: string;
+  date: string;
+  significance: string;
+  strategicIntent: string;
+}
+
+export interface PricingAnalysis {
+  competitorPricing: string;
+  ourPricing: string;
+  pricingGap: string;
+  recommendation: string;
+}
+
+export interface Differentiation {
+  current: string;
+  opportunity: string;
+  recommendedPositioning: string;
+}
+
+export interface PredictedMove {
+  move: string;
+  probability: string;
+  timing: string;
+  ourResponse: string;
 }
 
 export interface CompetitorReport {
@@ -114,13 +146,13 @@ export interface CompetitorReport {
     targetUsers: string;
     businessModel: string;
     coreFeatures: string[];
-    recentUpdates: string[];
+    recentUpdates: RecentUpdate[];
   };
   swot?: {
-    strengths: string[];
-    weaknesses: string[];
-    opportunities: string[];
-    threats: string[];
+    strengths: SwotStrength[];
+    weaknesses: SwotWeakness[];
+    opportunities: SwotOpportunity[];
+    threats: SwotThreat[];
   };
   comparison?: {
     dimensions: string[];
@@ -135,9 +167,9 @@ export interface CompetitorReport {
   competitorProfiles: CompetitorProfile[];
   featureComparison: ComparisonItem[];
   strengthsWeaknesses: SWOTItem[];
-  pricingAnalysis: string;
-  differentiation: string;
-  predictedMoves: string;
+  pricingAnalysis: PricingAnalysis | null;
+  differentiation: Differentiation | null;
+  predictedMoves: PredictedMove[];
   opportunities: string[];
   threats: string[];
   timeline: TimelinePhase[];

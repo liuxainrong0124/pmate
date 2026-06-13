@@ -4,7 +4,7 @@ import { PUSH_STRATEGY_SYSTEM_PROMPT, buildPushStrategyUserPrompt } from "@/lib/
 
 export async function POST(request: NextRequest) {
   try {
-    const { segments, apiKey } = await request.json();
+    const { segments, apiKey, historicalContext } = await request.json();
     if (!segments || typeof segments !== "string" || !segments.trim()) {
       return NextResponse.json({ error: "segments is required" }, { status: 400 });
     }
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const res = await callLlm({ apiKey,
       messages: [
         { role: "system", content: PUSH_STRATEGY_SYSTEM_PROMPT },
-        { role: "user", content: buildPushStrategyUserPrompt(segments.trim()) },
+        { role: "user", content: buildPushStrategyUserPrompt(segments.trim(), typeof historicalContext === "string" ? historicalContext : undefined) },
       ],
       temperature: 0.7,
       responseFormat: "json_object",
