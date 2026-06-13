@@ -35,6 +35,7 @@ export function clearSyncUserId() {
 
 /** Upload all localStorage data to Supabase for the current user */
 export async function uploadAllToSupabase(): Promise<{ pushed: number; errors: number }> {
+  if (!supabase) return { pushed: 0, errors: 0 };
   const userId = getUserId();
   if (!userId) return { pushed: 0, errors: 0 };
 
@@ -82,6 +83,7 @@ export async function uploadAllToSupabase(): Promise<{ pushed: number; errors: n
 
 /** Download all data from Supabase and merge into localStorage */
 export async function downloadAllFromSupabase(): Promise<{ pulled: number; errors: number }> {
+  if (!supabase) return { pulled: 0, errors: 0 };
   const userId = getUserId();
   if (!userId) return { pulled: 0, errors: 0 };
 
@@ -125,6 +127,7 @@ export async function pushItem(
   item: Record<string, unknown>,
   isDelete = false
 ) {
+  if (!supabase) return;
   const userId = getUserId();
   if (!userId) return;
 

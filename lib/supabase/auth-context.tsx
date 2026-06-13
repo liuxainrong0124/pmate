@@ -45,6 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Safety: hide loading after 3s even if Supabase doesn't respond
     const timeout = setTimeout(() => {
       if (!cancelled) setLoading(false);
     }, 3000);
@@ -85,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    // Use cached role immediately for fast UI
+    if (!supabase) return;
     const cached = getCachedRole();
 
     try {
@@ -105,12 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) return { error: "Supabase not configured" };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
     return {};
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
+    if (!supabase) return { error: "Supabase not configured" };
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -121,7 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
     setSession(null);
     setRole("member");
