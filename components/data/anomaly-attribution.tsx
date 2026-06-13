@@ -165,7 +165,7 @@ export function AnomalyAttribution() {
                       </div>
 
                       {/* Root Causes */}
-                      {analyses[i].rootCauses.length > 0 && (
+                      {(analyses[i].rootCauses?.length ?? 0) > 0 && (
                         <div>
                           <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">根因分析 (按置信度排序)</span>
                           <div className="mt-2 space-y-2">
@@ -189,7 +189,7 @@ export function AnomalyAttribution() {
                       )}
 
                       {/* Correlated Metrics */}
-                      {analyses[i].correlatedMetrics.length > 0 && (
+                      {(analyses[i].correlatedMetrics?.length ?? 0) > 0 && (
                         <div className="flex items-center gap-2 text-xs">
                           <Link2 className="w-3.5 h-3.5 text-gray-400" />
                           <span className="text-gray-500">关联指标：</span>
@@ -220,7 +220,7 @@ export function AnomalyAttribution() {
                       </div>
 
                       {/* Actions */}
-                      {analyses[i].actions.length > 0 && (
+                      {(analyses[i].actions?.length ?? 0) > 0 && (
                         <div>
                           <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">建议行动</span>
                           <div className="mt-2 space-y-1.5">

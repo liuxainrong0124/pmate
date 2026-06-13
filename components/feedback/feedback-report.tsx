@@ -33,9 +33,10 @@ function getScoreColor(score: number): string {
 export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
   const router = useRouter();
 
-  const highCount = report.insights.filter((i) => i.severity === "high").length;
-  const avgScore = report.insights.length > 0
-    ? Math.round(report.insights.reduce((s, i) => s + i.impactScore, 0) / report.insights.length)
+  const insights = report.insights ?? [];
+  const highCount = insights.filter((i) => i.severity === "high").length;
+  const avgScore = insights.length > 0
+    ? Math.round(insights.reduce((s, i) => s + i.impactScore, 0) / insights.length)
     : 0;
 
   const handleToPrd = (insight: typeof report.insights[0]) => {
@@ -64,7 +65,7 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
           <div className="text-xs text-gray-400 dark:text-gray-500">平均影响分</div>
         </div>
         <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-3 text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{report.actionItems.length}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{report.actionItems?.length ?? 0}</div>
           <div className="text-xs text-gray-400 dark:text-gray-500">行动建议</div>
         </div>
       </div>
@@ -77,7 +78,7 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
         </div>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{report.summary}</p>
         <div className="flex gap-2 mt-4">
-          {report.categories.map((c) => <Badge key={c} variant="secondary" className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">{catLabels[c]||c}</Badge>)}
+          {(report.categories ?? []).map((c) => <Badge key={c} variant="secondary" className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">{catLabels[c]||c}</Badge>)}
         </div>
       </div>
 
@@ -85,10 +86,10 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
       <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Lightbulb className="w-4 h-4 text-amber-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">关键洞察 ({report.insights.length})</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">关键洞察 ({insights.length})</h3>
         </div>
         <div className="space-y-4">
-          {report.insights.sort((a,b)=>{ const o: Record<string,number>={high:3,medium:2,low:1}; return o[b.severity]-o[a.severity]; })
+          {[...insights].sort((a,b)=>{ const o: Record<string,number>={high:3,medium:2,low:1}; return (o[b.severity]??0)-(o[a.severity]??0); })
             .map((insight,i) => {
               const s = sevCfg[insight.severity];
               return (
@@ -139,10 +140,10 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
       <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <ListChecks className="w-4 h-4 text-blue-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">行动建议 ({report.actionItems.length})</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">行动建议 ({report.actionItems?.length ?? 0})</h3>
         </div>
         <div className="space-y-3">
-          {report.actionItems.map((item,i)=>(
+          {(report.actionItems ?? []).map((item,i)=>(
             <div key={i} className="flex gap-3 items-start">
               <span className={`text-xs px-2 py-0.5 rounded-full border mt-0.5 ${
                 item.effort==="low"?"bg-green-50 text-green-700 border-green-200"

@@ -55,7 +55,7 @@ function PersonaCard({ persona }: { persona: UserPersona }) {
               {persona.goals.map((g, i) => (
                 <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
                   <span className="mt-1.5 w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
-                  {g}
+                  <span>{typeof g === "string" ? g : g.goal}</span>
                 </li>
               ))}
             </ul>
@@ -69,7 +69,7 @@ function PersonaCard({ persona }: { persona: UserPersona }) {
               {persona.painPoints.map((p, i) => (
                 <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
                   <span className="mt-1.5 w-1 h-1 rounded-full bg-red-400 shrink-0" />
-                  {p}
+                  <span>{typeof p === "string" ? p : p.pain}</span>
                 </li>
               ))}
             </ul>
@@ -173,9 +173,9 @@ export function PersonaGenerator() {
             occupation: p.occupation as string,
             tagline: p.tagline as string,
             quote: p.quote as string,
-            goals: p.goals as string[],
-            painPoints: p.painPoints as string[],
-            behaviors: p.behaviors as string[],
+            goals: (Array.isArray(p.goals) ? p.goals : []) as UserPersona["goals"],
+            painPoints: (Array.isArray(p.painPoints) ? p.painPoints : []) as UserPersona["painPoints"],
+            behaviors: (Array.isArray(p.behaviors) ? p.behaviors : []) as string[],
             segmentName: seg.name,
           }));
           setPersonas(mapped);

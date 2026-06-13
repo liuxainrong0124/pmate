@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { callLlmStreaming } from "@/lib/ai/client";
+import { selfReview } from "@/lib/ai/self-review";
 import { PRD_SYSTEM_PROMPT, buildPrdUserPrompt, PROGRESS_STEP_ORDER, PROGRESS_MESSAGES } from "@/lib/ai/prompts/prd";
 import { PrdInput, PrdProgress, PrdTemplateType } from "@/types";
 
@@ -72,6 +73,26 @@ export async function POST(request: NextRequest) {
             send({ type: "chunk", content: chunk });
           }
         );
+
+        // Phase 2: Real self-review (separate LLM call)
+        try {
+          const reviewResult = await selfReview({
+            apiKey: apiKey || undefined,
+            domain: "产品需求文档（PRD）",
+            qualityRubric: `## PRD质量标准
+- 所有数字必须有计算逻辑，不能凭空出现
+- 用户故事必须有明确的验收条件
+- 功能详述必须覆盖正常流程、边界条件、异常处理
+- 验收标准必须可测试、可量化（GWT格式）
+- 不能有"显著提升"、"体验良好"等主观模糊表述
+- 风险与依赖必须具体，有回滚方案`,
+            originalPrompt: buildPrdUserPrompt(prdInput),
+            aiOutput: accumulatedText,
+          });
+          send({ type: "review", review: reviewResult });
+        } catch {
+          // If review fails, send done anyway
+        }
 
         send({ type: "done", usage: response.usage });
         controller.close();

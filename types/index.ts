@@ -45,10 +45,18 @@ export interface PrdSection {
   content: string;
 }
 
+export interface PrdReview {
+  score: number;
+  issuesFound: string[];
+  improvements: string[];
+  reviewNotes: string;
+}
+
 export interface PrdOutput {
   sections: PrdSection[];
   fullMarkdown: string;
   suggestions: string[];
+  review?: PrdReview;
 }
 
 export type PrdProgressStep =

@@ -8,19 +8,52 @@ import {
   StoredExperiment,
 } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { twoProportionZTest } from "@/lib/stats";
 
 interface AnalysisResult {
-  significant: boolean;
-  confidenceLevel: string;
-  pValue: string;
-  lift: string;
-  confidenceInterval: string;
-  winner: string;
-  recommendation: string;
-  conclusion: string;
-  detailAnalysis: string;
-  risks: string[];
-  nextSteps: string[];
+  statisticalSummary: {
+    controlRate: string;
+    experimentRate: string;
+    absoluteLift: string;
+    relativeLift: string;
+    zScore: number;
+    pValue: string;
+    confidenceInterval: string;
+    significant: boolean;
+    power: string;
+    sampleSizeAdequate: string;
+  };
+  businessImpact: {
+    practicalSignificance: string;
+    northStarAlignment: string;
+    expectedROI: string;
+    userExperienceImpact: string;
+  };
+  noveltyCheck: {
+    durationRisk: string;
+    recommendation: string;
+    trendStabilityNote: string;
+  };
+  segmentationRisks: {
+    simpsonWarning: string;
+    recommendedSegments: string[];
+    potentialReversals: string;
+  };
+  longTermProjection: {
+    oneMonthEffect: string;
+    threeMonthEffect: string;
+    keyAssumptions: string[];
+    decayRisk: string;
+  };
+  recommendation: {
+    verdict: string;
+    rationale: string;
+    ifLaunch: string;
+    ifExtend: string;
+    ifRedesign: string;
+    risks: string[];
+    nextSteps: string[];
+  };
 }
 
 const statusMeta: Record<string, { label: string; color: string }> = {
@@ -31,17 +64,49 @@ const statusMeta: Record<string, { label: string; color: string }> = {
 
 function getDemoAnalysis(): AnalysisResult {
   return {
-    significant: true,
-    confidenceLevel: "95%",
-    pValue: "p = 0.0032 (< 0.05，统计显著)",
-    lift: "+23.3%",
-    confidenceInterval: "[+18.5%, +28.1%]",
-    winner: "实验组（红色按钮）",
-    recommendation: "建议全量推全",
-    conclusion: "红色按钮的点击率显著高于蓝色按钮（14.8% vs 12.0%），相对提升23.3%，95%置信区间不含0，结果可信。两组的样本量均超过5000，统计功效充足。建议将首页CTA按钮统一改为红色。",
-    detailAnalysis: "采用双样本比例Z检验，Z值=3.12 > 1.96(临界值)。实验组点击率14.8%，对照组12.0%，绝对提升2.8个百分点。按20%流量已运行7天，不存在新奇效应（实验组第7天表现与第3天无显著差异）。最小检测效应量(2.8pp)在当前样本量下功效为94%。",
-    risks: ["用户对新颜色的适应期可能需要1-2周", "不同页面背景下的红色按钮效果待验证", "按钮颜色可能与其他UI元素产生视觉冲突"],
-    nextSteps: ["灰度50%流量观察3天确认效果稳定", "同步测试不同页面位置的按钮颜色效果", "监控按钮点击后的转化率是否有连带变化"],
+    statisticalSummary: {
+      controlRate: "12.0%",
+      experimentRate: "14.8%",
+      absoluteLift: "+2.8 个百分点",
+      relativeLift: "+23.3%",
+      zScore: 3.12,
+      pValue: "p = 0.0018 (< 0.01，高度显著)",
+      confidenceInterval: "[+1.0%, +4.6%] (95% 置信区间不含0，结果可信)",
+      significant: true,
+      power: "统计功效 94%（充足）",
+      sampleSizeAdequate: "样本量充足（每组5000，远超最低要求每組1800）",
+    },
+    businessImpact: {
+      practicalSignificance: "点击率提升2.8个百分点意味着每日额外约1,400次点击（基于50,000日活）。假设点击到下单转化率10%，日均额外订单140单，按客单价200元计算，月均额外GMV约84万元。",
+      northStarAlignment: "点击率是转化的上游漏斗指标，提升点击率→提升详情页到达→提升下单转化→提升GMV。但需关注：点击率提升是否带来等比例的转化提升，还是只增加了无效浏览。",
+      expectedROI: "按钮改色为纯前端改动，开发成本约2人天。按保守估计仅10%的点击增量转化为实际订单，ROI仍为正（840元/天增量GMV vs 几乎为0的维护成本）。结论：高ROI改动，建议尽快上线。",
+      userExperienceImpact: "正面：红色按钮引导性更强，减少用户犹豫时间。潜在负面：如果全站按钮都改成红色可能引起视觉疲劳，建议仅在关键CTA使用。",
+    },
+    noveltyCheck: {
+      durationRisk: "低",
+      recommendation: "7天实验期已足够排除新奇效应。实验组第7天表现（14.6%）与第3天（14.9%）无显著差异，趋势稳定。",
+      trendStabilityNote: "逐日数据波动小（标准差<0.5pp），说明效果不是昙花一现。建议全量推全后继续监控30天确认无衰减。",
+    },
+    segmentationRisks: {
+      simpsonWarning: "建议分层分析：新用户vs老用户、iOS vs Android、不同流量来源。本实验仅展示总体数据，细分维度可能存在反转（如新用户偏爱蓝色而老用户偏爱红色）。",
+      recommendedSegments: ["新用户 vs 老用户", "iOS vs Android", "自然流量 vs 付费流量", "一线城市 vs 二三线城市"],
+      potentialReversals: "新用户（注册<7天）可能对蓝色按钮信任度更高，建议单独分析该人群数据后再决定是否全量。",
+    },
+    longTermProjection: {
+      oneMonthEffect: "推全1个月后预期点击率在14.5%-15.0%区间，效果趋于稳定。用户对新颜色的适应期约1-2周，之后点击率进入稳态。",
+      threeMonthEffect: "3个月后效果可能衰减至+20%左右（用户对红色的新鲜感下降），但仍高于基准线。建议3个月后重新A/B测试不同颜色方案以寻找新的最优解。",
+      keyAssumptions: ["竞品不在此期间进行重大UI改版", "产品核心功能不发生根本变化", "用户群体特征保持稳定"],
+      decayRisk: "中（新鲜感衰减是颜色类改动的常见模式，但不至于降至基准线以下）",
+    },
+    recommendation: {
+      verdict: "建议全量推全",
+      rationale: "1) 统计高度显著(p<0.01)；2) 提升幅度23.3%有业务意义；3) 样本量充足；4) 无新奇效应；5) 实施方案成本极低。综合评估：这是一个'安全且有效'的改动，没有明显理由继续观望。",
+      ifLaunch: "灰度策略：第一天20%→第三天50%→第五天100%。监控指标：点击率、详情页到达率、下单转化率（确保整个漏斗都正向）。回滚条件：任何一步出现点击率下降>5%立即回滚。",
+      ifExtend: "如果决定延长，建议再跑7天以获取14天数据，同时增加分层分析维度。但基于当前数据，延长实验的边际收益较低。",
+      ifRedesign: "如果要重新设计，建议测试更多颜色变体（橙色、绿色）以及按钮大小、位置、文案的组合效果，而不仅限于红蓝对比。",
+      risks: ["用户对新颜色的适应期可能需要1-2周", "不同页面背景下的红色按钮效果待验证", "按钮颜色可能与部分品牌合作页面的UI冲突"],
+      nextSteps: ["灰度50%流量观察3天确认效果稳定", "同步测试不同页面位置的按钮颜色效果", "监控按钮点击后的转化率是否有连带变化", "3个月后重新A/B测试更多颜色方案"],
+    },
   };
 }
 
@@ -111,6 +176,15 @@ export function ExperimentManager() {
     setAnalyzingId(exp.id);
     setAnalysisError(null);
     setIsDemoAnalysis(false);
+
+    // Step 1: Compute real statistics locally (no AI hallucination)
+    const stats = twoProportionZTest(
+      Math.round(exp.valueA * exp.sampleA),
+      exp.sampleA,
+      Math.round(exp.valueB * exp.sampleB),
+      exp.sampleB
+    );
+
     try {
       const res = await fetch("/api/experiment/analyze", {
         method: "POST",
@@ -123,6 +197,21 @@ export function ExperimentManager() {
             groupA: { name: exp.groupA, sample: exp.sampleA, value: exp.valueA },
             groupB: { name: exp.groupB, sample: exp.sampleB, value: exp.valueB },
             plannedDays: exp.plannedDays,
+          },
+          statsResult: {
+            controlRate: stats.controlRate,
+            experimentRate: stats.experimentRate,
+            absoluteLift: stats.absoluteLift,
+            relativeLift: stats.relativeLift,
+            zScore: stats.zScore,
+            pValue: stats.pValue,
+            significant: stats.significant,
+            confidenceLevel: stats.confidenceLevel,
+            ciLow: stats.ciLow,
+            ciHigh: stats.ciHigh,
+            sampleSizeAdequate: stats.sampleSizeAdequate,
+            minSampleNeeded: stats.minSampleNeeded,
+            power: stats.power,
           },
         }),
       });
@@ -279,68 +368,99 @@ export function ExperimentManager() {
             )}
 
             {analysisResult && (
-              <div className="space-y-4 animate-fade-in">
+              <div className="space-y-4 animate-fade-in text-sm">
                 {isDemoAnalysis && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">演示数据</span>}
 
-                {/* Score card */}
+                {/* 1. Statistical Summary */}
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`text-3xl font-bold ${analysisResult.significant ? "text-emerald-600" : "text-amber-600"}`}>
-                      {analysisResult.lift}
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2">统计指标（前端实时计算，非AI生成）</h5>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className={`text-3xl font-bold ${analysisResult.statisticalSummary.significant ? "text-emerald-600" : "text-amber-600"}`}>
+                      {analysisResult.statisticalSummary.relativeLift}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{analysisResult.winner}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{analysisResult.confidenceLevel} · {analysisResult.pValue}</p>
+                    <div className="flex-1 space-y-0.5">
+                      <p className="text-xs text-gray-500">
+                        对照 {analysisResult.statisticalSummary.controlRate} → 实验 {analysisResult.statisticalSummary.experimentRate}
+                      </p>
+                      <p className="text-xs text-gray-500">{analysisResult.statisticalSummary.pValue}</p>
+                      <p className="text-xs text-gray-500">Z = {analysisResult.statisticalSummary.zScore.toFixed(2)} · {analysisResult.statisticalSummary.power}</p>
                     </div>
-                    {analysisResult.significant ? (
+                    {analysisResult.statisticalSummary.significant ? (
                       <CheckCircle className="w-6 h-6 text-emerald-500 ml-auto" />
                     ) : (
                       <TrendingDown className="w-6 h-6 text-amber-500 ml-auto" />
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">置信区间: {analysisResult.confidenceInterval}</p>
+                  <p className="text-xs text-gray-400">置信区间: {analysisResult.statisticalSummary.confidenceInterval}</p>
+                  <p className="text-xs text-gray-400">{analysisResult.statisticalSummary.sampleSizeAdequate}</p>
                 </div>
 
-                {/* Recommendation */}
-                <div className={`rounded-lg p-3 ${analysisResult.recommendation.includes("全量") ? "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20"}`}>
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{analysisResult.recommendation}</p>
+                {/* 2. Recommendation */}
+                <div className={`rounded-lg p-3 ${analysisResult.recommendation.verdict.includes("全量") ? "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20"}`}>
+                  <p className="text-sm font-semibold">{analysisResult.recommendation.verdict}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{analysisResult.recommendation.rationale}</p>
                 </div>
 
-                {/* Conclusion */}
-                <div>
-                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">分析结论</h5>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{analysisResult.conclusion}</p>
-                </div>
-
-                {/* Detail */}
-                <div>
-                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">统计详情</h5>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{analysisResult.detailAnalysis}</p>
-                </div>
-
-                {/* Risks */}
-                {analysisResult.risks.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">风险与注意事项</h5>
-                    {analysisResult.risks.map((r, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                        <span className="mt-0.5">·</span> {r}
-                      </div>
-                    ))}
+                {/* 3. Business Impact */}
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">业务影响分析</summary>
+                  <div className="mt-2 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <p><span className="font-medium">实际意义：</span>{analysisResult.businessImpact.practicalSignificance}</p>
+                    <p><span className="font-medium">北极星对齐：</span>{analysisResult.businessImpact.northStarAlignment}</p>
+                    <p><span className="font-medium">预估ROI：</span>{analysisResult.businessImpact.expectedROI}</p>
+                    <p><span className="font-medium">用户体验：</span>{analysisResult.businessImpact.userExperienceImpact}</p>
                   </div>
-                )}
+                </details>
 
-                {/* Next Steps */}
-                {analysisResult.nextSteps.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">下一步建议</h5>
-                    {analysisResult.nextSteps.map((s, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                        <span className="text-violet-500 font-medium mt-0.5">{i + 1}.</span> {s}
-                      </div>
-                    ))}
+                {/* 4. Novelty Check */}
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">新奇效应评估</summary>
+                  <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p>风险等级：{analysisResult.noveltyCheck.durationRisk} · {analysisResult.noveltyCheck.recommendation}</p>
+                    <p>{analysisResult.noveltyCheck.trendStabilityNote}</p>
                   </div>
-                )}
+                </details>
+
+                {/* 5. Segmentation Risks */}
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">分层分析建议</summary>
+                  <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p>{analysisResult.segmentationRisks.simpsonWarning}</p>
+                    <p className="text-amber-600">{analysisResult.segmentationRisks.potentialReversals}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {analysisResult.segmentationRisks.recommendedSegments.map((s, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 text-[10px]">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+
+                {/* 6. Long-term Projection */}
+                <details className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer">长期效果推演</summary>
+                  <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p><span className="font-medium">1个月：</span>{analysisResult.longTermProjection.oneMonthEffect}</p>
+                    <p><span className="font-medium">3个月：</span>{analysisResult.longTermProjection.threeMonthEffect}</p>
+                    <p><span className="font-medium">衰减风险：</span>{analysisResult.longTermProjection.decayRisk}</p>
+                    <p className="text-gray-400 mt-1">假设：{analysisResult.longTermProjection.keyAssumptions.join("；")}</p>
+                  </div>
+                </details>
+
+                {/* 7. Risks & Next Steps */}
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">风险与下一步</h5>
+                  {analysisResult.recommendation.risks.map((r, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400"><span className="mt-0.5">·</span> {r}</div>
+                  ))}
+                </div>
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase mb-1">执行计划</h5>
+                  {analysisResult.recommendation.nextSteps.map((s, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                      <span className="text-violet-500 font-medium mt-0.5">{i + 1}.</span> {s}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

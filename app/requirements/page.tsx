@@ -36,9 +36,10 @@ function RequirementsContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
+  const [review, setReview] = useState<PrdOutput["review"] | null>(null);
 
   const handleSubmit = async (input: PrdInputType) => {
-    setIsLoading(true); setError(null); setOutput(null); setProgress(null); setRawText("");
+    setIsLoading(true); setError(null); setOutput(null); setProgress(null); setRawText(""); setReview(null);
     try {
       const res = await fetch("/api/prd/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -47,7 +48,7 @@ function RequirementsContent() {
       if (!res.ok) { const data = await res.json(); throw new Error(data.error || "生成失败"); }
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");
-      const decoder = new TextDecoder(); let fullText = "";
+      const decoder = new TextDecoder(); let fullText = ""; let reviewData: PrdOutput["review"] = undefined;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -57,7 +58,8 @@ function RequirementsContent() {
             const data = JSON.parse(line.slice(6));
             if (data.type === "progress") setProgress(data.progress);
             else if (data.type === "chunk") { fullText += data.content; setRawText(fullText); }
-            else if (data.type === "done") { const parsed = parsePrdResponse(fullText); setOutput(parsed); }
+            else if (data.type === "review") { const r = data.review; setReview(r); reviewData = r; }
+            else if (data.type === "done") { const parsed = parsePrdResponse(fullText); parsed.review = reviewData; setOutput(parsed); }
             else if (data.type === "error") throw new Error(data.message);
           }
         }

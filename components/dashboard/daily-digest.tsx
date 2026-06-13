@@ -5,15 +5,37 @@ import { getUserApiKey, getTodos, getPoolRequirements, getObjectives, getCompeti
 import { getAlertHistory } from "@/lib/alert";
 import { getUploadedMetrics } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
+import { cn } from "@/lib/utils";
 import { Sparkles, Loader2, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
+
+interface HighlightItem {
+  point: string;
+  indicator: "good" | "warning" | "info";
+  detail: string;
+}
+
+interface RiskItem {
+  risk: string;
+  severity: "high" | "medium";
+  action: string;
+}
+
+interface ScheduleItem {
+  priority: number;
+  task: string;
+  reason: string;
+  duration: string;
+}
 
 interface DigestData {
   greeting: string;
+  headline?: string;
   summary: string;
-  highlights: string[];
-  risks: string[];
-  suggestions: string[];
+  highlights?: HighlightItem[];
+  risks?: RiskItem[];
+  schedule?: ScheduleItem[];
   mood: "positive" | "neutral" | "urgent";
+  moodReason?: string;
 }
 
 export function DailyDigest() {
@@ -141,36 +163,55 @@ export function DailyDigest() {
         <div className="space-y-3">
           <p className="text-sm text-gray-700 leading-relaxed">{digest.summary}</p>
 
-          {digest.highlights.length > 0 && (
-            <div className="space-y-1">
+          {digest.highlights && digest.highlights.length > 0 && (
+            <div className="rounded-xl bg-white/60 p-3">
+              <p className="text-xs font-medium text-gray-700 mb-1.5">关键动态</p>
               {digest.highlights.map((h, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-gray-400 mt-1.5 shrink-0" />
-                  <span className="text-xs text-gray-600">{h}</span>
+                <div key={i} className="flex items-start gap-2 text-xs mb-1 last:mb-0">
+                  <span className={cn(
+                    "w-1.5 h-1.5 rounded-full mt-1.5 shrink-0",
+                    h.indicator === "good" && "bg-emerald-400",
+                    h.indicator === "warning" && "bg-amber-400",
+                    h.indicator === "info" && "bg-blue-400"
+                  )} />
+                  <div>
+                    <span className="text-gray-800 font-medium">{h.point}</span>
+                    <span className="text-gray-400 ml-2">{h.detail}</span>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {digest.risks.length > 0 && (
+          {digest.risks && digest.risks.length > 0 && (
             <div className="rounded-xl bg-white/60 p-3">
               <p className="text-xs font-medium text-amber-700 mb-1.5">需要关注</p>
               {digest.risks.map((r, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xs text-amber-600">
-                  <AlertTriangle className="w-3 h-3 shrink-0" />
-                  {r}
+                <div key={i} className="flex items-start gap-1.5 text-xs mb-1 last:mb-0">
+                  <AlertTriangle className={cn(
+                    "w-3 h-3 shrink-0 mt-0.5",
+                    r.severity === "high" ? "text-red-400" : "text-amber-400"
+                  )} />
+                  <div>
+                    <span className="text-amber-800 font-medium">{r.risk}</span>
+                    <span className="text-amber-500 ml-2">{r.action}</span>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {digest.suggestions.length > 0 && (
+          {digest.schedule && digest.schedule.length > 0 && (
             <div className="rounded-xl bg-white/60 p-3">
-              <p className="text-xs font-medium text-gray-700 mb-1.5">今日建议</p>
-              {digest.suggestions.map((s, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <span className="font-bold text-violet-500">{i + 1}.</span>
-                  {s}
+              <p className="text-xs font-medium text-gray-700 mb-1.5">今日优先事项</p>
+              {digest.schedule.map((s, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs mb-1.5 last:mb-0">
+                  <span className="font-bold text-violet-500 shrink-0 mt-0.5">{s.priority}.</span>
+                  <div>
+                    <span className="text-gray-800 font-medium">{s.task}</span>
+                    <span className="text-gray-400 ml-1">({s.duration})</span>
+                    <p className="text-gray-400 text-[11px]">{s.reason}</p>
+                  </div>
                 </div>
               ))}
             </div>

@@ -117,9 +117,11 @@ export function RequirementsPool() {
   // AI Review
   const [reviewing, setReviewing] = useState(false);
   const [reviewResult, setReviewResult] = useState<{
-    score: number; summary: string; strengths: string[];
-    issues: { severity: string; category: string; description: string; suggestion: string }[];
-    missingScenarios: string[]; acceptanceCriteriaQuality: string; readyForDev: boolean;
+    score: number; summary: string; strengths: { point: string; why?: string }[];
+    issues: { severity: string; category: string; description: string; impact?: string; suggestion: string }[];
+    missingScenarios: { scenario: string; why?: string; example?: string }[];
+    acceptanceCriteriaQuality: string | { level: string; issues?: string[]; suggestedACs?: string[] };
+    readyForDev: boolean;
   } | null>(null);
 
   // Batch operations
@@ -863,8 +865,9 @@ export function RequirementsPool() {
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">做得好的地方</p>
                         {reviewResult.strengths.map((s, i) => (
-                          <div key={i} className="flex items-start gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
-                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />{s}
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 mb-0.5 last:mb-0">
+                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span>{typeof s === "string" ? s : `${s.point}${s.why ? `（${s.why}）` : ""}`}</span>
                           </div>
                         ))}
                       </div>
@@ -902,15 +905,18 @@ export function RequirementsPool() {
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">缺少的边界/异常场景</p>
                         {reviewResult.missingScenarios.map((s, i) => (
-                          <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                            <AlertIcon className="w-3 h-3 mt-0.5 shrink-0" />{s}
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 mb-0.5 last:mb-0">
+                            <AlertIcon className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span>{typeof s === "string" ? s : `${s.scenario}${s.example ? `（例：${s.example}）` : ""}`}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
                     <p className="text-[10px] text-gray-400">
-                      验收标准质量: {reviewResult.acceptanceCriteriaQuality === "good" ? "✅ 充分" : reviewResult.acceptanceCriteriaQuality === "adequate" ? "⚡ 基本合格" : "❌ 不足"} ·
+                      验收标准质量: {(typeof reviewResult.acceptanceCriteriaQuality === "string"
+                        ? reviewResult.acceptanceCriteriaQuality === "good" ? "✅ 充分" : reviewResult.acceptanceCriteriaQuality === "adequate" ? "⚡ 基本合格" : "❌ 不足"
+                        : reviewResult.acceptanceCriteriaQuality.level === "good" ? "✅ 充分" : reviewResult.acceptanceCriteriaQuality.level === "adequate" ? "⚡ 基本合格" : "❌ 不足")} ·
                       可进入开发: {reviewResult.readyForDev ? "✅ 是" : "❌ 否"}
                     </p>
                   </div>

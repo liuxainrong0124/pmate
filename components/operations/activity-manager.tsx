@@ -84,6 +84,7 @@ export function ActivityManager() {
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [isDemoPlan, setIsDemoPlan] = useState(false);
+  const [reasoning, setReasoning] = useState<{ steps: string[]; reviewScore: number; reviewNotes: string } | null>(null);
 
   // Detail drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -140,7 +141,12 @@ export function ActivityManager() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.plan) { setGenResult(data.plan); setGenLoading(false); return; }
+        if (data.plan) {
+          setGenResult(data.plan);
+          if (data.reasoning) setReasoning(data.reasoning);
+          setGenLoading(false);
+          return;
+        }
       }
       throw new Error("AI 生成失败");
     } catch {
@@ -355,6 +361,31 @@ export function ActivityManager() {
             ) : (
               <div className="space-y-4 animate-fade-in">
                 {isDemoPlan && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">演示数据</span>}
+                {reasoning && !isDemoPlan && (
+                  <div className="rounded-lg bg-violet-50 dark:bg-violet-500/5 border border-violet-100 dark:border-violet-500/10 p-2.5 mb-1">
+                    <div className="flex items-center gap-1.5 text-[10px] text-violet-500 mb-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI 思考链
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                      {reasoning.steps.map((step, i) => (
+                        <span key={i} className="flex items-center gap-1">
+                          <span className="text-violet-700 dark:text-violet-300 font-medium">{step}</span>
+                          {i < reasoning.steps.length - 1 && <span className="text-violet-300">→</span>}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px]">
+                      <span className="text-violet-500">自审评分：</span>
+                      <span className={`font-bold ${reasoning.reviewScore >= 7 ? "text-emerald-600" : reasoning.reviewScore >= 5 ? "text-amber-600" : "text-red-600"}`}>
+                        {reasoning.reviewScore}/10
+                      </span>
+                      {reasoning.reviewNotes && (
+                        <span className="text-violet-400 truncate max-w-[300px]">{reasoning.reviewNotes}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">{genResult.name}</h4>
                   <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{genResult.theme}</p>

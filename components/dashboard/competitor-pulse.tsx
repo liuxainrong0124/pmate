@@ -244,7 +244,7 @@ export function CompetitorPulse() {
           )}
 
           {/* Alerts */}
-          {result.alerts.length > 0 && (
+          {(result.alerts?.length ?? 0) > 0 && (
             <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3">
               <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1.5">需要关注</p>
               {result.alerts.map((a, i) => (

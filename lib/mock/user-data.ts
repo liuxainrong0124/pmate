@@ -9,13 +9,26 @@ export interface UserSegment {
   strategy: string;
 }
 
+export interface PersonaGoal {
+  goal: string;
+  why?: string;
+  currentSolution?: string;
+}
+
+export interface PersonaPainPoint {
+  pain: string;
+  frequency?: string;
+  impact?: string;
+  currentWorkaround?: string;
+}
+
 export interface UserPersona {
   name: string;
   age: string;
   occupation: string;
   tagline: string;
-  goals: string[];
-  painPoints: string[];
+  goals: string[] | PersonaGoal[];
+  painPoints: string[] | PersonaPainPoint[];
   behaviors: string[];
   quote: string;
   segmentName: string;

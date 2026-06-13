@@ -91,7 +91,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
               </div>
             </div>
             <div className="space-y-3">
-              {report.company.coreFeatures.length > 0 && (
+              {(report.company.coreFeatures?.length ?? 0) > 0 && (
                 <div>
                   <span className="text-xs text-gray-400">核心功能</span>
                   <div className="flex flex-wrap gap-1.5 mt-1">
@@ -103,7 +103,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                   </div>
                 </div>
               )}
-              {report.company.recentUpdates.length > 0 && (
+              {(report.company.recentUpdates?.length ?? 0) > 0 && (
                 <div>
                   <span className="text-xs text-gray-400">近期更新</span>
                   <ul className="mt-1 space-y-1">
@@ -135,7 +135,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                 <Shield className="w-3.5 h-3.5" /> 优势 Strengths
               </h4>
               <ul className="space-y-1.5">
-                {report.swot.strengths.map((s, i) => (
+                {(report.swot.strengths ?? []).map((s, i) => (
                   <li key={i} className="text-xs text-emerald-800 flex items-start gap-1.5">
                     <span className="text-emerald-400 mt-0.5 shrink-0">+</span>
                     {s}
@@ -149,7 +149,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                 <AlertTriangle className="w-3.5 h-3.5" /> 劣势 Weaknesses
               </h4>
               <ul className="space-y-1.5">
-                {report.swot.weaknesses.map((s, i) => (
+                {(report.swot.weaknesses ?? []).map((s, i) => (
                   <li key={i} className="text-xs text-red-800 flex items-start gap-1.5">
                     <span className="text-red-400 mt-0.5 shrink-0">-</span>
                     {s}
@@ -163,7 +163,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                 <TrendingUp className="w-3.5 h-3.5" /> 机会 Opportunities
               </h4>
               <ul className="space-y-1.5">
-                {report.swot.opportunities.map((s, i) => (
+                {(report.swot.opportunities ?? []).map((s, i) => (
                   <li key={i} className="text-xs text-blue-800 flex items-start gap-1.5">
                     <span className="text-blue-400 mt-0.5 shrink-0">+</span>
                     {s}
@@ -177,7 +177,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                 <AlertTriangle className="w-3.5 h-3.5" /> 威胁 Threats
               </h4>
               <ul className="space-y-1.5">
-                {report.swot.threats.map((s, i) => (
+                {(report.swot.threats ?? []).map((s, i) => (
                   <li key={i} className="text-xs text-orange-800 flex items-start gap-1.5">
                     <span className="text-orange-400 mt-0.5 shrink-0">-</span>
                     {s}
@@ -190,7 +190,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       )}
 
       {/* Comparison Radar Chart (AI 全自动分析) */}
-      {report.comparison && report.comparison.dimensions.length >= 3 && (
+      {report.comparison && (report.comparison.dimensions?.length ?? 0) >= 3 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-4 h-4 text-blue-500" />
@@ -242,7 +242,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                 <p className="text-sm text-gray-700 leading-relaxed">{report.impact.gapAnalysis}</p>
               </div>
             )}
-            {report.impact.suggestions.length > 0 && (
+            {(report.impact.suggestions?.length ?? 0) > 0 && (
               <div>
                 <span className="text-xs text-gray-400 block mb-2">建议动作</span>
                 <div className="space-y-2">
@@ -260,7 +260,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       )}
 
       {/* Competitor Profiles */}
-      {report.competitorProfiles.length > 0 && (
+      {(report.competitorProfiles?.length ?? 0) > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-blue-500" />
@@ -307,7 +307,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       )}
 
       {/* Feature Comparison */}
-      {report.featureComparison.length > 0 && (
+      {(report.featureComparison?.length ?? 0) > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4 text-violet-500" />
@@ -373,7 +373,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       </div>
 
       {/* SWOT */}
-      {report.strengthsWeaknesses.length > 0 && (
+      {(report.strengthsWeaknesses?.length ?? 0) > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="w-4 h-4 text-indigo-500" />
@@ -408,7 +408,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
 
       {/* Opportunities & Threats */}
       <div className="grid gap-5 md:grid-cols-2">
-        {report.opportunities.length > 0 && (
+        {(report.opportunities?.length ?? 0) > 0 && (
           <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/30 to-white p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
@@ -424,7 +424,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
             </ul>
           </div>
         )}
-        {report.threats.length > 0 && (
+        {(report.threats?.length ?? 0) > 0 && (
           <div className="rounded-2xl border border-red-100 bg-gradient-to-br from-red-50/30 to-white p-5">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -443,7 +443,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       </div>
 
       {/* Timeline */}
-      {report.timeline.length > 0 && (
+      {(report.timeline?.length ?? 0) > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-orange-500" />
@@ -476,7 +476,7 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
       )}
 
       {/* Action Items */}
-      {report.actionItems.length > 0 && (
+      {(report.actionItems?.length ?? 0) > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <ListChecks className="w-4 h-4 text-blue-500" />
