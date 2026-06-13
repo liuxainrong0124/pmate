@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { StoredObjective, StoredKeyResult, getObjectives, addObjective, updateObjective, deleteObjective } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
-import { Target, Plus, X, Trash2, Edit3, TrendingUp, ChevronDown, ChevronRight } from "lucide-react";
+import { Target, Plus, X, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 
 export default function OkrPage() {
   const [objectives, setObjectives] = useState<StoredObjective[]>([]);

@@ -319,46 +319,60 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          {/* Webhook URL */}
+          {/* Webhook 机器人 — 飞书 / 钉钉 / 企微 */}
           <div className="p-4">
             <div className="flex items-center gap-3 mb-3">
               <Bell className="w-4 h-4 text-gray-500" />
-              <h3 className="font-semibold text-sm text-gray-900">Webhook 通知</h3>
+              <h3 className="font-semibold text-sm text-gray-900">机器人推送</h3>
             </div>
             <p className="text-xs text-gray-400 mb-3">
-              告警触发时向此 URL 发送 POST 请求，支持飞书/钉钉/企微/Slack 机器人
+              告警触发时向配置的机器人发送消息，支持飞书、钉钉、企业微信
             </p>
-            <input
-              type="text"
-              placeholder="https://hooks.example.com/webhook..."
-              value={alertSettings?.webhookUrl || ""}
-              onChange={(e) => {
-                const next = { webhookUrl: e.target.value };
-                setAlertSettings({ ...alertSettings!, ...next });
-                saveAlertSettings(next);
-              }}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-violet-400"
-            />
-            {alertSettings?.webhookUrl && (
-              <button
-                onClick={async () => {
-                  showToast("正在测试 Webhook...", "info");
-                  try {
-                    await fetch(alertSettings!.webhookUrl, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ text: "Pulse 测试消息 — Webhook 连接成功！" }),
-                    });
-                    showToast("Webhook 测试成功", "success");
-                  } catch {
-                    showToast("Webhook 测试失败，请检查 URL", "error");
-                  }
-                }}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors"
-              >
-                测试 Webhook
-              </button>
-            )}
+            {([
+              { key: "feishuWebhook" as const, label: "飞书", placeholder: "https://open.feishu.cn/open-apis/bot/v2/hook/...", format: "feishu" },
+              { key: "dingtalkWebhook" as const, label: "钉钉", placeholder: "https://oapi.dingtalk.com/robot/send?access_token=...", format: "dingtalk" },
+              { key: "wecomWebhook" as const, label: "企业微信", placeholder: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...", format: "wecom" },
+            ] as const).map(({ key, label, placeholder, format }) => (
+              <div key={key} className="mb-3 last:mb-0">
+                <p className="text-xs font-medium text-gray-600 mb-1.5">{label}</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={placeholder}
+                    value={settings?.[key] || ""}
+                    onChange={(e) => {
+                      const next = { [key]: e.target.value };
+                      setSettings({ ...settings!, ...next });
+                      saveSettings(next);
+                    }}
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-violet-400"
+                  />
+                  {settings?.[key] && (
+                    <button
+                      onClick={async () => {
+                        showToast(`正在测试${label}机器人...`, "info");
+                        try {
+                          const body = format === "feishu"
+                            ? { msg_type: "text", content: { text: "Pulse 测试消息 — 机器人连接成功！" } }
+                            : { msgtype: "text", text: { content: "Pulse 测试消息 — 机器人连接成功！" } };
+                          await fetch(settings![key], {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(body),
+                          });
+                          showToast(`${label}机器人测试成功`, "success");
+                        } catch {
+                          showToast(`${label}机器人测试失败`, "error");
+                        }
+                      }}
+                      className="shrink-0 px-3 py-2 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors"
+                    >
+                      测试
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

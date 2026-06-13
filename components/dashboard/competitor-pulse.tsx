@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUserApiKey, getMonitoredCompetitors, updateMonitoredCompetitorCheck, addMonitoredCompetitor, removeMonitoredCompetitor, toggleMonitoredCompetitor, getCompetitorUpdateCount, clearCompetitorUpdateCount, StoredMonitoredCompetitor } from "@/lib/store/local-store";
-import { TrendingUp, Loader2, RefreshCw, ExternalLink, Bell, BellOff, Trash2, Plus, X, Settings } from "lucide-react";
+import { getUserApiKey, getMonitoredCompetitors, updateMonitoredCompetitorCheck, addMonitoredCompetitor, removeMonitoredCompetitor, toggleMonitoredCompetitor, clearCompetitorUpdateCount, StoredMonitoredCompetitor } from "@/lib/store/local-store";
+import { TrendingUp, Loader2, RefreshCw, ExternalLink, Bell, BellOff, Trash2, Plus, X } from "lucide-react";
 import Link from "next/link";
 
 interface CompetitorUpdate {

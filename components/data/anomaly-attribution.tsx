@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { mockAnomalies, AnomalyEvent, MetricWithHistory } from "@/lib/mock/metrics-data";
-import { getUserApiKey } from "@/lib/store/local-store";
+import { mockAnomalies, AnomalyEvent } from "@/lib/mock/metrics-data";
+import { getUserApiKey, addPoolRequirement, addLog } from "@/lib/store/local-store";
+import { showToast } from "@/components/shared/toast";
 import Link from "next/link";
 import {
   AlertTriangle, TrendingDown, ArrowRight, Lightbulb, ChevronDown,
@@ -36,7 +37,7 @@ const effortColors: Record<string, string> = {
 
 export function AnomalyAttribution() {
   const [expandedId, setExpandedId] = useState<number | null>(0);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [analyses, setAnalyses] = useState<Record<number, AnalysisResult>>({});
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,22 @@ export function AnomalyAttribution() {
       setError(msg);
     }
     setAnalyzingId(null);
+  };
+
+  const handleToPool = (event: AnomalyEvent) => {
+    addPoolRequirement({
+      title: `${event.metric}异动修复`,
+      module: "数据洞察",
+      status: "planning",
+      priority: "p1",
+      impact: 7,
+      effort: 5,
+      assignee: "",
+      backupAssignee: "",
+      approvalStatus: "pending",
+    });
+    addLog("cross_module", "需求池", `从异动归因创建需求: ${event.metric}异动修复`);
+    showToast("已加入需求池", "success");
   };
 
   const severityBadge = (s: string) => {
@@ -238,14 +255,24 @@ export function AnomalyAttribution() {
                       )}
 
                       {/* Create requirement button */}
-                      <Link
-                        href={`/requirements?tab=prd&from=anomaly&title=${encodeURIComponent(event.metric + "异动修复")}&description=${encodeURIComponent(analyses[i].rootCauses[0]?.cause || "")}`}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        创建修复需求单
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/requirements?tab=prd&from=anomaly&title=${encodeURIComponent(event.metric + "异动修复")}&description=${encodeURIComponent(analyses[i].rootCauses[0]?.cause || "")}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          创建修复需求单
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                        <button
+                          onClick={() => handleToPool(event)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-800 transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          加入需求池
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   )}
 

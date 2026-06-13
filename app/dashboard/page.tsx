@@ -105,25 +105,22 @@ export default function DashboardPage() {
     const uploaded = getUploadedMetrics();
     if (uploaded.length === 0) return;
     setHasUploadedData(true);
-    const merged = [...emptyMetrics];
-    for (const s of uploaded) {
+
+    // Build metric cards directly from uploaded data — no empty placeholders
+    const merged: MetricData[] = uploaded.map(s => {
       const values = s.values;
       const last = values[values.length - 1] ?? 0;
-      const prevLen = Math.min(10, values.length);
-      const start = Math.max(0, values.length - prevLen);
-      const prev = values.length >= 8 ? values[values.length - 8] ?? last : values[0] ?? last;
+      const prev = values.length >= 2 ? values[values.length - 2] ?? last : values[0] ?? last;
       const change = prev !== 0 ? Math.round(((last - prev) / Math.abs(prev)) * 1000) / 10 : 0;
-      const sparkline = values.slice(start);
-      const converted: MetricData = {
+      const sparkline = values.slice(Math.max(0, values.length - 10));
+      return {
         label: s.label,
         value: last >= 1000 ? `${(last / 1000).toFixed(1)}k` : String(Math.round(last * 10) / 10),
         change,
         trend: change >= 0 ? "up" : "down",
         sparkline: sparkline.length > 0 ? sparkline : [0],
       };
-      const idx = merged.findIndex(m => m.label === s.label);
-      if (idx >= 0) merged[idx] = converted;
-    }
+    });
     setMetrics(merged);
   }, []);
 

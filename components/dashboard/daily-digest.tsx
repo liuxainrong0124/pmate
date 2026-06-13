@@ -4,9 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { getUserApiKey, getTodos, getPoolRequirements, getObjectives, getCompetitorUpdateCount, clearCompetitorUpdateCount, getSettings } from "@/lib/store/local-store";
 import { getAlertHistory } from "@/lib/alert";
 import { getUploadedMetrics } from "@/lib/store/local-store";
-import { showToast } from "@/components/shared/toast";
 import { cn } from "@/lib/utils";
-import { Sparkles, Loader2, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface HighlightItem {
   point: string;

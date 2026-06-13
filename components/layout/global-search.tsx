@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, LayoutDashboard, FileText, BarChart3, Users, Megaphone,
-  TrendingUp, Settings, CornerDownLeft, X, Home, MessageSquare,
+  TrendingUp, Settings, CornerDownLeft, X, MessageSquare,
 } from "lucide-react";
-import { getPoolRequirements, PoolRequirement } from "@/lib/store/local-store";
-import { getFeedbackHistory, StoredFeedback } from "@/lib/store/local-store";
+import { getPoolRequirements } from "@/lib/store/local-store";
+import { getFeedbackHistory } from "@/lib/store/local-store";
 
 interface SearchItem {
   id: string;
@@ -218,7 +218,7 @@ export function GlobalSearch() {
                     <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                       {group}
                     </div>
-                    {items.map((item, idx) => {
+                    {items.map((item) => {
                       const globalIdx = filtered.indexOf(item);
                       const isSelected = globalIdx === selectedIndex;
                       return (

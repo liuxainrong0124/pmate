@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { MetricWithHistory } from "@/lib/mock/metrics-data";
 import { getPoolRequirements, getObjectives, getSettings } from "@/lib/store/local-store";
 import { showToast } from "@/components/shared/toast";
-import { FileText, Download, Calendar, TrendingUp, TrendingDown, Users, Target, Copy } from "lucide-react";
+import { FileText, Download, Copy } from "lucide-react";
 
 interface ReportSection {
   title: string;

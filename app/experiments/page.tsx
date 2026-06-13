@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { FlaskConical, Plus, Pencil, Trash2, Play, Square, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import {
   getExperiments,
   deleteExperiment,
   updateExperiment,
+  addPoolRequirement,
   addLog,
   StoredExperiment,
 } from "@/lib/store/local-store";
@@ -26,6 +28,7 @@ const statusBadge: Record<string, { label: string; className: string }> = {
 };
 
 export default function ExperimentsPage() {
+  const router = useRouter();
   const [experiments, setExperiments] = useState<StoredExperiment[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showForm, setShowForm] = useState(false);
@@ -33,6 +36,23 @@ export default function ExperimentsPage() {
   const [selectedExperiment, setSelectedExperiment] = useState<StoredExperiment | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [resultExperiment, setResultExperiment] = useState<StoredExperiment | null>(null);
+
+  const handleExperimentToRequirement = (exp: StoredExperiment) => {
+    addPoolRequirement({
+      title: `实验优化: ${exp.name}`,
+      module: "运营中心",
+      status: "planning",
+      priority: exp.lift > 15 ? "p0" : "p1",
+      impact: Math.min(10, Math.round(exp.lift / 5)),
+      effort: 5,
+      assignee: "",
+      backupAssignee: "",
+      approvalStatus: "pending",
+    });
+    addLog("cross_module", "需求池", `从A/B实验创建需求: ${exp.name} (提升${exp.lift}%)`);
+    showToast("已加入需求池", "success");
+    router.push("/requirements?tab=pool");
+  };
 
   const loadExperiments = useCallback(() => {
     setExperiments(getExperiments());
@@ -298,6 +318,14 @@ export default function ExperimentsPage() {
                       <FileText className="w-3 h-3" />
                       查看报告
                     </button>
+                    {exp.lift > 10 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleExperimentToRequirement(exp); }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors"
+                      >
+                        创建需求
+                      </button>
+                    )}
                     {canEdit() && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(exp); }}

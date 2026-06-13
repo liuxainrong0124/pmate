@@ -127,7 +127,9 @@ async function parseDocx(file: File): Promise<string> {
 
 async function parseExcel(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
-  const XLSX = (await import("xlsx")).default;
+  const XLSXModule: Record<string, unknown> = await import("xlsx");
+  // xlsx ESM build uses named exports (no default); CJS build uses module.exports
+  const XLSX = (XLSXModule.default || XLSXModule) as { read: (d: Uint8Array, o: { type: string }) => { SheetNames: string[]; Sheets: Record<string, { [key: string]: unknown }> }; utils: { sheet_to_csv: (s: unknown) => string } };
   const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
   const texts: string[] = [];
   for (const sheetName of workbook.SheetNames) {

@@ -66,7 +66,7 @@ function inverseNormalCDF(p: number): number {
   }
   const r = p < 0.5 ? p : 1 - p;
   const s = Math.sqrt(-Math.log(r));
-  let z = c0 + s * (c1 + s * (c2 + s * (c3 + s * (c4 + s * (c5 + s * (c6 + s * (c7 + s * c8)))))));
+  const z = c0 + s * (c1 + s * (c2 + s * (c3 + s * (c4 + s * (c5 + s * (c6 + s * (c7 + s * c8)))))));
   return p < 0.5 ? -z : z;
 }
 

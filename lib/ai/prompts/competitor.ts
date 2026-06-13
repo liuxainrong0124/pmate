@@ -123,7 +123,7 @@ export function buildCompetitorUserPrompt(
   context?: string,
   historicalAnalysis?: string
 ): string {
-  let prompt = `请深度分析以下竞品：
+  const prompt = `请深度分析以下竞品：
 
 竞品名称：${competitors}
 ${context ? `\n我方产品背景：${context}` : ""}

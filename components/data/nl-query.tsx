@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MetricWithHistory } from "@/lib/mock/metrics-data";
 import { getUserApiKey } from "@/lib/store/local-store";
-import { Send, Loader2, Sparkles, TrendingUp, TrendingDown, BarChart3, X } from "lucide-react";
+import { Send, Loader2, Sparkles, BarChart3 } from "lucide-react";
 
 interface QueryResult {
   answer: string;

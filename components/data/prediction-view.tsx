@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { MetricWithHistory } from "@/lib/mock/metrics-data";
 import { predictAllMetrics, PredictionResult } from "@/lib/prediction";
-import { TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 export function PredictionView({ metrics }: { metrics: MetricWithHistory[] }) {
   const [forecastDays, setForecastDays] = useState<number>(7);

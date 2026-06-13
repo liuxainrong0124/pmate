@@ -5,7 +5,6 @@ import {
   ACTIVITY_STEP_SYSTEM_PROMPTS,
   ACTIVITY_QUALITY_RUBRIC,
   buildActivityUserPrompt,
-  buildActivityHistoricalContext,
 } from "@/lib/ai/prompts/activity";
 
 const SYNTHESIS_SYSTEM_PROMPT = `你是一个资深活动运营策略师。前面已经完成了4步深度分析（目标分析→机制设计→排期预算→风险文案），现在请将所有分析结果综合为一份完整的活动策划方案。

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, X, Check, ArrowRight, FileJson, FileText, AlertTriangle, Download, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, X, Check, ArrowRight, FileJson, FileText, AlertTriangle, Download, BarChart3 } from "lucide-react";
 import { getUploadedMetrics, setUploadedMetrics, StoredMetric } from "@/lib/store/local-store";
-import { showToast } from "@/components/shared/toast";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -165,7 +165,10 @@ export function DataUpload() {
         formData.append("files", file);
         const res = await fetch("/api/parse-file", { method: "POST", body: formData });
         setProgress(60);
-        if (!res.ok) throw new Error("Excel 解析失败，请检查文件是否损坏或受密码保护");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error((errData as { error?: string }).error || "Excel 解析失败，请检查文件是否损坏或受密码保护");
+        }
         const data = await res.json();
         if (data.files?.[0]?.text) {
           const parsed = parseCSV(data.files[0].text);
@@ -415,16 +418,31 @@ export function DataUpload() {
 
       {/* Save */}
       {parsedData && (
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSave}
-            disabled={saved}
-            className={`rounded-xl shadow-sm ${
-              saved ? "bg-emerald-100 text-emerald-700" : "bg-gray-900 hover:bg-gray-800 text-white"
-            }`}
-          >
-            {saved ? (<><Check className="mr-2 h-4 w-4" />已保存到看板</>) : (<><ArrowRight className="mr-2 h-4 w-4" />保存到看板</>)}
-          </Button>
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={saved}
+              className={`rounded-xl shadow-sm ${
+                saved ? "bg-emerald-100 text-emerald-700" : "bg-gray-900 hover:bg-gray-800 text-white"
+              }`}
+            >
+              {saved ? (<><Check className="mr-2 h-4 w-4" />已保存到看板</>) : (<><ArrowRight className="mr-2 h-4 w-4" />保存到看板</>)}
+            </Button>
+          </div>
+          {saved && (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-2 animate-fade-in">
+              <p className="text-sm font-medium text-emerald-800">数据已连接，现在可以：</p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Link href="/data" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                  <BarChart3 className="w-3 h-3" /> 查看指标看板
+                </Link>
+                <Link href="/operations?tab=report" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                  <FileText className="w-3 h-3" /> 生成分析报告
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -36,10 +36,9 @@ function RequirementsContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
-  const [review, setReview] = useState<PrdOutput["review"] | null>(null);
 
   const handleSubmit = async (input: PrdInputType) => {
-    setIsLoading(true); setError(null); setOutput(null); setProgress(null); setRawText(""); setReview(null);
+    setIsLoading(true); setError(null); setOutput(null); setProgress(null); setRawText("");
     try {
       const res = await fetch("/api/prd/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -58,7 +57,7 @@ function RequirementsContent() {
             const data = JSON.parse(line.slice(6));
             if (data.type === "progress") setProgress(data.progress);
             else if (data.type === "chunk") { fullText += data.content; setRawText(fullText); }
-            else if (data.type === "review") { const r = data.review; setReview(r); reviewData = r; }
+            else if (data.type === "review") { const r = data.review; reviewData = r; }
             else if (data.type === "done") { const parsed = parsePrdResponse(fullText); parsed.review = reviewData; setOutput(parsed); }
             else if (data.type === "error") throw new Error(data.message);
           }
@@ -111,7 +110,14 @@ function RequirementsContent() {
             <div className="mb-4 p-3.5 rounded-xl bg-gradient-to-r from-violet-50 dark:from-violet-500/10 to-indigo-50 dark:to-indigo-500/10 border border-violet-100 dark:border-violet-500/20 flex items-center gap-2.5 text-sm animate-fade-in">
               <ArrowLeftRight className="w-4 h-4 text-violet-500" />
               <span className="text-gray-600 dark:text-gray-300">
-                来自 <b className="text-violet-700 dark:text-violet-400">{fromModule === "feedback" ? "用户反馈分析" : "竞品动态追踪"}</b> 的需求
+                来自 <b className="text-violet-700 dark:text-violet-400">{
+                  fromModule === "feedback" ? "用户反馈分析" :
+                  fromModule === "competitor" ? "竞品动态追踪" :
+                  fromModule === "anomaly" ? "数据异动归因" :
+                  fromModule === "persona" ? "用户画像" :
+                  fromModule === "experiment" ? "A/B 实验" :
+                  "外部来源"
+                }</b> 的需求
               </span>
             </div>
           )}

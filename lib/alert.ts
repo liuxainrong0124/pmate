@@ -1,4 +1,4 @@
-import { getItem, setItem } from "@/lib/store/local-store";
+import { getItem, setItem, getSettings } from "@/lib/store/local-store";
 import { sendNotification } from "@/lib/notify";
 
 export interface AlertRecord {
@@ -14,10 +14,9 @@ export interface AlertRecord {
 
 export interface AlertSettings {
   enabled: boolean;
-  threshold: number; // percentage, e.g. 5 means ±5%
+  threshold: number;
   autoRefresh: boolean;
   refreshIntervalMinutes: number;
-  webhookUrl: string;
 }
 
 const DEFAULT_ALERT_SETTINGS: AlertSettings = {
@@ -25,8 +24,54 @@ const DEFAULT_ALERT_SETTINGS: AlertSettings = {
   threshold: 5,
   autoRefresh: false,
   refreshIntervalMinutes: 5,
-  webhookUrl: "",
 };
+
+function buildAlertText(record: AlertRecord): string {
+  const dir = record.direction === "up" ? "上升" : "下降";
+  return `⚠️ Pulse 异动告警\n指标: ${record.metric}\n变化: ${dir} ${Math.abs(record.change)}%\n当前值: ${record.currentValue}\n上期值: ${record.previousValue}\n时间: ${record.timestamp}`;
+}
+
+async function sendToFeishu(url: string, record: AlertRecord) {
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      msg_type: "text",
+      content: { text: buildAlertText(record) },
+    }),
+  });
+}
+
+async function sendToDingtalk(url: string, record: AlertRecord) {
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      msgtype: "text",
+      text: { content: buildAlertText(record) },
+    }),
+  });
+}
+
+async function sendToWecom(url: string, record: AlertRecord) {
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      msgtype: "text",
+      text: { content: buildAlertText(record) },
+    }),
+  });
+}
+
+export async function sendWebhookAlert(record: AlertRecord) {
+  const settings = getSettings();
+  const tasks: Promise<void>[] = [];
+  if (settings.feishuWebhook) tasks.push(sendToFeishu(settings.feishuWebhook, record).catch(() => {}));
+  if (settings.dingtalkWebhook) tasks.push(sendToDingtalk(settings.dingtalkWebhook, record).catch(() => {}));
+  if (settings.wecomWebhook) tasks.push(sendToWecom(settings.wecomWebhook, record).catch(() => {}));
+  await Promise.allSettled(tasks);
+}
 
 export function getUnreadAlertCount(): number {
   const history = getAlertHistory();
@@ -37,21 +82,6 @@ export function getUnreadAlertCount(): number {
 
 export function markAlertsRead() {
   setItem("lastAlertReadAt", new Date().toISOString());
-}
-
-export async function sendWebhookAlert(record: AlertRecord) {
-  const settings = getAlertSettings();
-  if (!settings.webhookUrl) return;
-
-  try {
-    await fetch(settings.webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: `⚠️ Pulse 异动告警\n指标: ${record.metric}\n变化: ${record.change > 0 ? "+" : ""}${record.change}%\n当前值: ${record.currentValue}\n上期值: ${record.previousValue}\n时间: ${record.timestamp}`,
-      }),
-    });
-  } catch { /* silently fail */ }
 }
 
 export function getAlertSettings(): AlertSettings {

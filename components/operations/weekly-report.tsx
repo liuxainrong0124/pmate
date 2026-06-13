@@ -7,6 +7,7 @@ import { getUserApiKey } from "@/lib/store/local-store";
 import {
   getPoolRequirements, getActivities, getExperiments,
   getCompetitorHistory, getFeedbackHistory, getUploadedMetrics,
+  getVersions, getObjectives,
 } from "@/lib/store/local-store";
 
 interface ReportRisk {
@@ -132,7 +133,7 @@ export function WeeklyReport() {
   const [period, setPeriod] = useState("本周");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [selectedModules, setSelectedModules] = useState<string[]>(["metrics", "requirements", "activities", "experiments", "competitor", "feedback"]);
+  const [selectedModules, setSelectedModules] = useState<string[]>(["metrics", "requirements", "activities", "experiments", "competitor", "feedback", "versions", "okr"]);
   const [customNotes, setCustomNotes] = useState("");
 
   const [report, setReport] = useState<ReportData | null>(null);
@@ -157,6 +158,8 @@ export function WeeklyReport() {
     { key: "experiments", label: "A/B实验", icon: "🧪" },
     { key: "competitor", label: "竞品动态", icon: "🎯" },
     { key: "feedback", label: "用户反馈", icon: "💬" },
+    { key: "versions", label: "版本发布", icon: "📦" },
+    { key: "okr", label: "OKR进度", icon: "🎯" },
   ];
 
   const handleGenerate = async () => {
@@ -229,6 +232,30 @@ export function WeeklyReport() {
         data.feedbackSummary = recent.length > 0
           ? `共${recent.length}条，正面${pos}条(${(pos/recent.length*100).toFixed(0)}%)，负面${neg}条(${(neg/recent.length*100).toFixed(0)}%)`
           : "";
+      }
+
+      if (selectedModules.includes("versions")) {
+        const versions = getVersions();
+        data.versions = versions.slice(0, 5).map(v => ({
+          version: v.version,
+          name: v.name,
+          status: v.status,
+          plannedDate: v.plannedDate,
+        }));
+      }
+
+      if (selectedModules.includes("okr")) {
+        const objectives = getObjectives();
+        data.okr = objectives.filter(o => o.status === "active").map(o => ({
+          title: o.title,
+          progress: o.progress,
+          keyResults: (o.keyResults ?? []).map(kr => ({
+            text: kr.text,
+            current: kr.current,
+            target: kr.target,
+            status: kr.status,
+          })),
+        }));
       }
 
       if (customNotes.trim()) {

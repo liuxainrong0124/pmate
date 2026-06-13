@@ -636,17 +636,8 @@ export default function DataPage() {
     const uploaded = getUploadedMetrics();
     if (uploaded.length > 0) {
       setHasData(true);
-      const merged = [...generateDefaultMockMetrics()];
-      for (const s of uploaded) {
-        const converted = storedToMetric(s);
-        const idx = merged.findIndex(m => m.label === s.label);
-        if (idx >= 0) {
-          merged[idx] = converted;
-        } else {
-          merged.push(converted);
-        }
-      }
-      setBaseMetrics(merged);
+      // Only show uploaded data — no mock data mixed in
+      setBaseMetrics(uploaded.map(s => storedToMetric(s)));
     } else {
       setBaseMetrics(generateDefaultMockMetrics());
     }
@@ -670,14 +661,7 @@ export default function DataPage() {
     const timer = setInterval(() => {
       const uploaded = getUploadedMetrics();
       if (uploaded.length > 0) {
-        const merged = [...generateDefaultMockMetrics()];
-        for (const s of uploaded) {
-          const converted = storedToMetric(s);
-          const idx = merged.findIndex(m => m.label === s.label);
-          if (idx >= 0) merged[idx] = converted;
-          else merged.push(converted);
-        }
-        setBaseMetrics(merged);
+        setBaseMetrics(uploaded.map(s => storedToMetric(s)));
       } else {
         setBaseMetrics(generateDefaultMockMetrics());
       }

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { FeedbackReport as FeedbackReportType } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, ListChecks, Sparkles, TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight } from "lucide-react";
+import { addPoolRequirement, addLog } from "@/lib/store/local-store";
+import { showToast } from "@/components/shared/toast";
 
 interface FeedbackReportProps { report: FeedbackReportType; }
 
@@ -40,12 +42,30 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
     : 0;
 
   const handleToPrd = (insight: typeof report.insights[0]) => {
+    addLog("cross_module", "PRD", `从反馈分析转向PRD: "${insight.title}"`);
     const params = new URLSearchParams();
     params.set("from", "feedback");
     params.set("title", insight.title);
     params.set("description", `${insight.title}\n根因：${insight.rootCause}\n影响评分：${insight.impactScore}/10`);
     params.set("context", `来自用户反馈分析 - ${insight.count}位用户提及此问题`);
     router.push(`/requirements?tab=prd&${params.toString()}`);
+  };
+
+  const handleToPool = (insight: typeof report.insights[0]) => {
+    addPoolRequirement({
+      title: insight.title,
+      module: "用户中心",
+      status: "planning",
+      priority: insight.severity === "high" ? "p0" : insight.severity === "medium" ? "p1" : "p2",
+      impact: insight.impactScore,
+      effort: 5,
+      assignee: "",
+      backupAssignee: "",
+      approvalStatus: "pending",
+    });
+    addLog("cross_module", "需求池", `从反馈分析创建需求: "${insight.title}"`);
+    showToast("已加入需求池", "success");
+    router.push("/requirements?tab=pool");
   };
 
   return (
@@ -124,12 +144,20 @@ export function FeedbackReportDisplay({ report }: FeedbackReportProps) {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => handleToPrd(insight)}
-                    className="mt-3 inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 font-medium transition-colors"
-                  >
-                    转为PRD需求 <ArrowRight className="w-3 h-3" />
-                  </button>
+                  <div className="mt-3 flex items-center gap-4">
+                    <button
+                      onClick={() => handleToPrd(insight)}
+                      className="inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 font-medium transition-colors"
+                    >
+                      转为PRD需求 <ArrowRight className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleToPool(insight)}
+                      className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium transition-colors"
+                    >
+                      加入需求池 <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               );
             })}

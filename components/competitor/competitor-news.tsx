@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getUserApiKey } from "@/lib/store/local-store";
 import {
   Rss, Loader2, Sparkles, ExternalLink, TrendingUp,
-  Calendar, Tag, AlertTriangle, Newspaper,
+  AlertTriangle, Newspaper,
 } from "lucide-react";
 
 export interface CompetitorNewsItem {

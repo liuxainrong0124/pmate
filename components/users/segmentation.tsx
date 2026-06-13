@@ -5,16 +5,43 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, TrendingUp, Clock, Repeat, DollarSign, Target, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { getUserApiKey,  getItem, setItem } from "@/lib/store/local-store";
 
+interface SegmentStrategy {
+  primaryGoal?: string;
+  tactics?: string[];
+  channel?: string;
+  frequency?: string;
+  expectedResponse?: string;
+  kpi?: string;
+}
+
 interface Segment {
   name: string;
   percentage: number;
-  r: string;
-  f: string;
-  m: string;
+  estimatedCount?: number;
+  r?: string;
+  f?: string;
+  m?: string;
+  rfm?: { r?: string; f?: string; m?: string; rScore?: number; fScore?: number; mScore?: number };
   characteristics: string[];
-  strategy: string;
+  strategy: string | SegmentStrategy;
   color: string;
 }
+
+function getStrategyText(s: Segment): string {
+  if (typeof s.strategy === "string") return s.strategy;
+  const parts: string[] = [];
+  if (s.strategy.primaryGoal) parts.push(`目标: ${s.strategy.primaryGoal}`);
+  if (s.strategy.tactics?.length) parts.push(`手段: ${s.strategy.tactics.join("；")}`);
+  if (s.strategy.channel) parts.push(`渠道: ${s.strategy.channel}`);
+  if (s.strategy.frequency) parts.push(`频率: ${s.strategy.frequency}`);
+  if (s.strategy.expectedResponse) parts.push(`预期响应: ${s.strategy.expectedResponse}`);
+  if (s.strategy.kpi) parts.push(`KPI: ${s.strategy.kpi}`);
+  return parts.join(" | ") || "暂无策略";
+}
+
+function getR(s: Segment): string { return s.r || s.rfm?.r || "—"; }
+function getF(s: Segment): string { return s.f || s.rfm?.f || "—"; }
+function getM(s: Segment): string { return s.m || s.rfm?.m || "—"; }
 
 interface SegmentationData {
   segments: Segment[];
@@ -51,8 +78,17 @@ const DEFAULT_SEGMENTS: SegmentationData = {
   totalUsers: 12370,
 };
 
+function parsePercent(v: number | string | undefined): number {
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+  const cleaned = v.replace("%", "").trim();
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
 function SegmentCard({ segment, defaultExpanded }: { segment: Segment; defaultExpanded: boolean }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const pct = parsePercent(segment.percentage);
 
   return (
     <div
@@ -69,11 +105,11 @@ function SegmentCard({ segment, defaultExpanded }: { segment: Segment; defaultEx
               className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold"
               style={{ backgroundColor: segment.color }}
             >
-              {segment.percentage}%
+              {pct}%
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">{segment.name}</h3>
-              <p className="text-xs text-gray-400">{Math.round((segment.percentage / 100) * (DEFAULT_SEGMENTS.totalUsers)).toLocaleString()} 人</p>
+              <p className="text-xs text-gray-400">{segment.estimatedCount || Math.round((pct / 100) * 12370).toLocaleString()} 人</p>
             </div>
           </div>
           {expanded ? (
@@ -85,7 +121,7 @@ function SegmentCard({ segment, defaultExpanded }: { segment: Segment; defaultEx
         <div className="w-full h-1.5 rounded-full bg-gray-100 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${segment.percentage}%`, backgroundColor: segment.color }}
+            style={{ width: `${pct}%`, backgroundColor: segment.color }}
           />
         </div>
       </button>
@@ -96,17 +132,17 @@ function SegmentCard({ segment, defaultExpanded }: { segment: Segment; defaultEx
             <div className="rounded-xl bg-gray-50 p-3 text-center">
               <Clock className="w-3.5 h-3.5 text-gray-400 mx-auto mb-1" />
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">最近使用</p>
-              <p className="text-xs font-semibold text-gray-900 mt-0.5">{segment.r}</p>
+              <p className="text-xs font-semibold text-gray-900 mt-0.5">{getR(segment)}</p>
             </div>
             <div className="rounded-xl bg-gray-50 p-3 text-center">
               <Repeat className="w-3.5 h-3.5 text-gray-400 mx-auto mb-1" />
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">使用频率</p>
-              <p className="text-xs font-semibold text-gray-900 mt-0.5">{segment.f}</p>
+              <p className="text-xs font-semibold text-gray-900 mt-0.5">{getF(segment)}</p>
             </div>
             <div className="rounded-xl bg-gray-50 p-3 text-center">
               <DollarSign className="w-3.5 h-3.5 text-gray-400 mx-auto mb-1" />
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">付费金额</p>
-              <p className="text-xs font-semibold text-gray-900 mt-0.5">{segment.m}</p>
+              <p className="text-xs font-semibold text-gray-900 mt-0.5">{getM(segment)}</p>
             </div>
           </div>
 
@@ -127,7 +163,7 @@ function SegmentCard({ segment, defaultExpanded }: { segment: Segment; defaultEx
             <Target className="w-4 h-4 shrink-0 mt-0.5" style={{ color: segment.color }} />
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">推荐策略</p>
-              <p className="text-sm text-gray-700 leading-relaxed">{segment.strategy}</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{getStrategyText(segment)}</p>
             </div>
           </div>
         </div>
@@ -207,7 +243,7 @@ export function Segmentation() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {segments.map((s) => (
               <div key={s.name} className="text-center">
-                <div className="text-lg font-bold" style={{ color: s.color }}>{s.percentage}%</div>
+                <div className="text-lg font-bold" style={{ color: s.color }}>{parsePercent(s.percentage)}%</div>
                 <div className="text-[11px] text-gray-400">{s.name}</div>
               </div>
             ))}

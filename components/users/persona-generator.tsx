@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { mockPersonas, mockSegments, UserPersona } from "@/lib/mock/user-data";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Target, AlertCircle, Lightbulb, Quote, ArrowRight, Loader2, Database } from "lucide-react";
+import { Sparkles, Target, AlertCircle, Lightbulb, Quote, ArrowRight, Loader2, Database, FileText } from "lucide-react";
 import Link from "next/link";
 import { getUserApiKey, getFeedbackHistory } from "@/lib/store/local-store";
 
@@ -89,13 +89,21 @@ function PersonaCard({ persona }: { persona: UserPersona }) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-3 pt-1">
           <Link
             href={`/operations?persona=${encodeURIComponent(persona.name)}&segment=${encodeURIComponent(persona.segmentName)}`}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5" />
             生成推送文案
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+          <Link
+            href={`/requirements?tab=prd&from=persona&title=${encodeURIComponent(`针对${persona.name}的功能优化`)}&description=${encodeURIComponent(`${persona.name}（${persona.age}岁 ${persona.occupation}）的核心痛点：${(persona.painPoints ?? []).slice(0, 2).map(p => typeof p === "string" ? p : p.pain).join("；")}`)}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            创建需求
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

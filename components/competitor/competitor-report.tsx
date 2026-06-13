@@ -5,6 +5,8 @@ import { CompetitorReport as CompetitorReportType } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { RadarChart } from "@/components/competitor/radar-chart";
 import { Lightbulb, ListChecks, Shield, TrendingUp, Target, AlertTriangle, Users, Zap, Clock, DollarSign, Crosshair, ArrowRight, Building2, Calendar, Gauge, BarChart3 } from "lucide-react";
+import { addPoolRequirement, addLog } from "@/lib/store/local-store";
+import { showToast } from "@/components/shared/toast";
 
 interface CompetitorReportProps { report: CompetitorReportType; }
 
@@ -36,12 +38,30 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
   const router = useRouter();
 
   const handleToPrd = (dimension: string, gap: string) => {
+    addLog("cross_module", "PRD", `从竞品分析转向PRD: ${dimension}`);
     const params = new URLSearchParams();
     params.set("from", "competitor");
     params.set("title", `追赶竞品 - ${dimension}`);
     params.set("description", `${dimension}方面存在差距：${gap}`);
     params.set("context", `来自竞品分析 - 需要在${dimension}维度追赶竞品`);
     router.push(`/requirements?tab=prd&${params.toString()}`);
+  };
+
+  const handleToPool = (dimension: string) => {
+    addPoolRequirement({
+      title: `追赶竞品 - ${dimension}`,
+      module: "竞品追踪",
+      status: "planning",
+      priority: "p1",
+      impact: 7,
+      effort: 5,
+      assignee: "",
+      backupAssignee: "",
+      approvalStatus: "pending",
+    });
+    addLog("cross_module", "需求池", `从竞品分析创建需求: ${dimension}`);
+    showToast("已加入需求池", "success");
+    router.push("/requirements?tab=pool");
   };
 
   return (
@@ -336,12 +356,20 @@ export function CompetitorReportDisplay({ report }: CompetitorReportProps) {
                     <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-50">{fc.gap}</p>
                   )}
                   {fc.assessment === "disadvantage" && (
-                    <button
-                      onClick={() => handleToPrd(fc.dimension, fc.gap)}
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
-                    >
-                      生成追赶PRD <ArrowRight className="w-3 h-3" />
-                    </button>
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => handleToPrd(fc.dimension, fc.gap)}
+                        className="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
+                      >
+                        生成追赶PRD <ArrowRight className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleToPool(fc.dimension)}
+                        className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 font-medium transition-colors"
+                      >
+                        加入需求池 <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
                   )}
                 </div>
               );
